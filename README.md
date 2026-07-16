@@ -90,9 +90,34 @@ open issue is CLOSED). First git commit made this session — `git log` is now p
 - Unknown-topic questions retrieve *some* chunks, so they go through the LLM (which correctly
   declines) rather than the deterministic not-found path — fine, no invention observed.
 
-Stack state: containers + service left RUNNING (`docker compose down` + kill :8090 to stop).
-Ollama tip: it isn't auto-started on this machine — if :11434 refuses,
-`Start-Process -WindowStyle Hidden ollama -ArgumentList "serve"`.
+### ⏭ Next session — pick up here
+
+**If Yousif's content landed** (seed-20 / utterances / vocab CONFIRMs — see the placeholder
+section at the bottom): re-ingest → re-eval → `npm run eval -- --sweep` → update
+`ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That's the step that should push routing accuracy
+past the 0.85 gate.
+
+**Otherwise, engineering backlog in priority order** (none needs content):
+1. **Contract tests** (docs/23 §1): pin the docs/08 request/response shapes of
+   `/v1/retrieve` `/v1/route` `/v1/answer` so Druid integration has a stable target.
+   ← recommended next
+2. **Resilience** (docs/06 §7): test/implement graceful endpoint behavior with Qdrant, TEI,
+   or Ollama down (healthz reports it; endpoint failure paths are unverified).
+3. **Service auth** (docs/10): at least an API key before the service is reachable by
+   anyone but localhost.
+4. **Arabic rewrite quality**: probe `qwen2.5:7b-instruct` for the rewrite call only
+   (would lift the known ar-rewrite fail-safe limitation above).
+5. **Safety red-team set** (docs/17): small adversarial suite runnable like the smoke test.
+
+**Open decisions for Yousif** (docs/23 §6): node:test vs Vitest; confirm GitHub Actions as
+CI runner (assumed); blocking vs advisory gates in alpha.
+**Pending from Yousif**: one-time GitHub sign-in (`git push -u origin master` → credential
+popup) — unblocks teammates + CI; then real data (bottom section).
+
+Stack state at session end: containers + service left RUNNING (`docker compose down` + kill
+:8090 to stop). To restart cold: `docker compose up -d` → check Ollama (`:11434`; it isn't
+auto-started — `Start-Process -WindowStyle Hidden ollama -ArgumentList "serve"`) →
+`npm run serve` → sanity: `npm test` (offline) + `node scripts/smoke-phase1.js` (full stack).
 Testing gotcha: PowerShell mangles Arabic in HTTP bodies — always test via Node scripts.
 
 Phase 1 additions (all code in place, service wiring done):
@@ -115,9 +140,8 @@ not-found path.
 thinking mode burning the token budget → truncation → guardrail block. Fixed by the swap to
 `qwen2.5:3b-instruct` + the rewrite-path fixes above; smoke-verified 2026-07-16.
 
-To resume: `docker compose up -d` → `npm run serve` → `node scripts/smoke-phase1.js` →
-open `http://127.0.0.1:8090/`. **⏭ Next work is the content work below** (real seed data,
-real utterances, vocab CONFIRMs) — then re-ingest, re-eval, re-sweep τ.
+To resume: see **"⏭ Next session — pick up here"** above (restart commands, prioritized
+backlog, pending decisions).
 
 ## Status (2026-07-15) — Phase 0 exit criterion MET
 
