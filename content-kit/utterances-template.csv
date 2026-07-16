@@ -1,0 +1,5 @@
+utterance,language,script,intent_id,target_flow,source,notes
+"I need a loan",en,latin,loan,loan_flow,EXAMPLE,"EXAMPLE ROW (from current placeholder seed) — delete before submitting; real rows must come from Laila logs"
+"احتاج قرض",ar,arab,loan,loan_flow,EXAMPLE,"EXAMPLE ROW — delete; keep customer spelling exactly as typed, do not clean up dialect or typos"
+"پێویستم بە قەرزە",ckb,arab,loan,loan_flow,EXAMPLE,"EXAMPLE ROW — delete; Sorani in Arabic script"
+"Ez deynê dixwazim",kmr,latin,loan,loan_flow,EXAMPLE,"EXAMPLE ROW — delete; romanized Kurdish rows are wanted too (docs/09 §3)"
