@@ -1,0 +1,17 @@
+# CI (docs/23 §2) — the unit gate, runs on every push/PR. The content-eval (docs/09)
+# and safety (docs/17) gates need the live stack (Qdrant + TEI + Ollama), so they stay
+# local (`npm run eval`) until a runner with services is provisioned (docs/23 §6).
+name: test
+on:
+  push:
+  pull_request:
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm test

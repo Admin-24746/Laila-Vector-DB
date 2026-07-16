@@ -8,6 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "test": "node --test",
     "ingest": "node src/ingest/run.js",
     "ingest:rebuild": "node src/ingest/run.js --rebuild",
     "ingest:dry": "node src/ingest/run.js --dry-run",

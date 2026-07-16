@@ -16,6 +16,7 @@ npm run ingest            # seed data → validate → chunk ×4 languages → e
 npm run serve             # retrieval-svc on :8090
 npm run eval              # gold-set metrics (add -- --sweep for threshold calibration)
 npm run sanity:kurdish    # D5 eyeball check + BGE-M3 license check
+npm test                  # unit suite (docs/23) — offline, no stack needed
 ```
 
 Config: copy `.env.example` → `.env` (defaults work locally).
@@ -41,6 +42,7 @@ src/service/     retrieve() engine (docs/06) + REST server (docs/08)
 src/eval/        eval harness (docs/09): Hit@k/MRR per language, routing confusion, τ sweep
 eval/gold/       gold test set (JSONL) — starter items incl. Kurdish slice
 eval/runs/       saved eval reports (gitignored)
+test/            unit suite (docs/23): chunker, normalizer, follow-up gate, guardrail, validation
 logs/            service audit log JSONL (gitignored)
 ```
 
@@ -67,6 +69,15 @@ open issue is CLOSED). First git commit made this session — `git log` is now p
      the conversation — rejects hallucinated/garbled rewrites).
    - Verified: en follow-up → `"and how do I cancel the combo bundle?"`, unsubscribe chunk
      jumps to rank 1. ckb → near-raw rewrite (anchored, harmless).
+3. **Unit suite + CI added (docs/23)**: `npm test` — 31 offline tests over the pure engine
+   (chunker, normalizer, language detection, follow-up gate incl. the `\b` regression net,
+   number-grounding guardrail, validation gate) with Node's built-in runner (zero new deps;
+   migrate to Vitest only if docs/23 §6 confirms it). `.github/workflows/test.yml` runs it on
+   every push/PR once the repo is on GitHub. Eval re-run after the rewrite changes: numbers
+   identical to the 2026-07-15 baseline (no retrieval regression).
+4. **GitHub remote configured, push pending auth**: `origin` →
+   `https://github.com/Admin-24746/Laila-Vector-DB.git` (repo exists, empty). First push needs
+   Yousif to sign in once: `git push -u origin master` → complete the credential-manager popup.
 
 **Known limitations (accepted for prototype, revisit with real data):**
 - **Arabic rewrites fail safe to raw**: qwen2.5:3b garbles Iraqi Arabic rewrites
