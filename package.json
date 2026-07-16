@@ -17,6 +17,7 @@
     "eval:sweep": "node src/eval/run.js --sweep",
     "gaps": "node src/eval/gaps.js",
     "sanity:kurdish": "node scripts/sanity-kurdish.js",
+    "redteam": "node scripts/red-team.js",
     "stack:up": "docker compose up -d",
     "stack:down": "docker compose down"
   },

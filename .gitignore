@@ -3,3 +3,4 @@ node_modules/
 .ingest-state.json
 logs/
 eval/runs/
+.claude/
