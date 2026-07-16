@@ -114,9 +114,10 @@ CI runner (assumed); blocking vs advisory gates in alpha.
 **Pending from Yousif**: one-time GitHub sign-in (`git push -u origin master` → credential
 popup) — unblocks teammates + CI; then real data (bottom section).
 
-Stack state at session end: containers + service left RUNNING (`docker compose down` + kill
-:8090 to stop). To restart cold: `docker compose up -d` → check Ollama (`:11434`; it isn't
-auto-started — `Start-Process -WindowStyle Hidden ollama -ArgumentList "serve"`) →
+Stack state at session end: shut down cleanly (service killed, `docker compose down`; Qdrant
+volume persists — the 129 points survive; Ollama left as-is). To restart cold:
+`docker compose up -d` → check Ollama (`:11434`; it isn't auto-started —
+`Start-Process -WindowStyle Hidden ollama -ArgumentList "serve"`) →
 `npm run serve` → sanity: `npm test` (offline) + `node scripts/smoke-phase1.js` (full stack).
 Testing gotcha: PowerShell mangles Arabic in HTTP bodies — always test via Node scripts.
 
