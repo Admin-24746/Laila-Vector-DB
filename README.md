@@ -69,9 +69,10 @@ open issue is CLOSED). First git commit made this session — `git log` is now p
      the conversation — rejects hallucinated/garbled rewrites).
    - Verified: en follow-up → `"and how do I cancel the combo bundle?"`, unsubscribe chunk
      jumps to rank 1. ckb → near-raw rewrite (anchored, harmless).
-3. **Unit suite + CI added (docs/23)**: `npm test` — 31 offline tests over the pure engine
+3. **Unit suite + CI added (docs/23)**: `npm test` — 45 offline tests: the pure engine
    (chunker, normalizer, language detection, follow-up gate incl. the `\b` regression net,
-   number-grounding guardrail, validation gate) with Node's built-in runner (zero new deps;
+   number-grounding guardrail, validation gate) plus the docs/08 contract suite (see
+   backlog item 1 below), all on Node's built-in runner (zero new deps;
    migrate to Vitest only if docs/23 §6 confirms it). `.github/workflows/test.yml` runs it on
    every push/PR once the repo is on GitHub. Eval re-run after the rewrite changes: numbers
    identical to the 2026-07-15 baseline (no retrieval regression).
@@ -98,13 +99,17 @@ section at the bottom): re-ingest → re-eval → `npm run eval -- --sweep` → 
 past the 0.85 gate.
 
 **Otherwise, engineering backlog in priority order** (none needs content):
-1. **Contract tests** (docs/23 §1): pin the docs/08 request/response shapes of
-   `/v1/retrieve` `/v1/route` `/v1/answer` so Druid integration has a stable target.
-   ← recommended next
+1. ~~**Contract tests** (docs/23 §1)~~ ✅ DONE 2026-07-16 (3rd session): `test/contract.test.js`
+   pins the docs/08 shapes of `/v1/retrieve` `/v1/route` `/v1/answer` `/healthz` + the auth
+   hook — 14 offline tests via Fastify `inject()`. Enabled by a server split:
+   `src/service/app.js` exports `buildApp(overrides)` (all routes, injectable deps);
+   `server.js` is now just the listen entry. Behavior unchanged (boot + healthz verified).
 2. **Resilience** (docs/06 §7): test/implement graceful endpoint behavior with Qdrant, TEI,
    or Ollama down (healthz reports it; endpoint failure paths are unverified).
+   ← recommended next
 3. **Service auth** (docs/10): at least an API key before the service is reachable by
-   anyone but localhost.
+   anyone but localhost. (The token hook itself is now contract-tested; what's left is
+   generating/distributing a token and turning it on outside localhost.)
 4. **Arabic rewrite quality**: probe `qwen2.5:7b-instruct` for the rewrite call only
    (would lift the known ar-rewrite fail-safe limitation above).
 5. **Safety red-team set** (docs/17): small adversarial suite runnable like the smoke test.
