@@ -1,0 +1,53 @@
+# Laila Knowledge Base — local stack (Phase 0)
+# Components per docs/11 Phase 0: Qdrant + TEI/BGE-M3 (+ retrieval-svc, run on host during dev).
+name: laila-kb
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest # pin an exact version before Phase 2 (docs/10)
+    container_name: laila-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333" # REST
+      - "6334:6334" # gRPC
+    volumes:
+      - qdrant_storage:/qdrant/storage
+
+  tei:
+    # CPU image: works everywhere. The RTX 5060 (Blackwell) needs a TEI build with
+    # CUDA 12.8+/sm_120 support — try the GPU variant below once, fall back to CPU if it fails.
+    # CPU latency is fine for Phase 0 (small corpus, batch ingestion).
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-latest
+    container_name: laila-tei
+    restart: unless-stopped
+    command: --model-id BAAI/bge-m3 --max-client-batch-size 64 --max-batch-tokens 16384
+    ports:
+      - "8080:80"
+    volumes:
+      - tei_cache:/data # model cache (~2.3GB on first pull)
+
+  # --- GPU variant (optional; replaces `tei` above) ---
+  # tei:
+  #   image: ghcr.io/huggingface/text-embeddings-inference:latest
+  #   command: --model-id BAAI/bge-m3 --max-client-batch-size 64
+  #   gpus: all
+  #   ports: ["8080:80"]
+  #   volumes: [tei_cache:/data]
+
+  # --- retrieval-svc in a container (Phase 1+; during Phase 0 dev run `npm run serve`) ---
+  # retrieval-svc:
+  #   build: .
+  #   ports: ["8090:8090"]
+  #   environment:
+  #     QDRANT_URL: http://qdrant:6333
+  #     TEI_URL: http://tei:80
+  #   depends_on: [qdrant, tei]
+
+  # --- Redis cache (Phase 2 — docs/10) ---
+  # redis:
+  #   image: redis:7-alpine
+  #   ports: ["6379:6379"]
+
+volumes:
+  qdrant_storage:
+  tei_cache:

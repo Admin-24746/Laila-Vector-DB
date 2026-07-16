@@ -1,0 +1,12 @@
+{
+  "_comment": "⚠️ PLACEHOLDER (docs/26 CONFIRM) — governorate starter list; replace/extend with the canonical location list used by offers.",
+  "baghdad": { "labels": { "en": "Baghdad", "ar": "بغداد", "ckb": "بەغدا", "kmr": "Bexda" } },
+  "basra": { "labels": { "en": "Basra", "ar": "البصرة", "ckb": "بەسرە", "kmr": "Besra" } },
+  "erbil": { "labels": { "en": "Erbil", "ar": "أربيل", "ckb": "هەولێر", "kmr": "Hewlêr" } },
+  "sulaymaniyah": { "labels": { "en": "Sulaymaniyah", "ar": "السليمانية", "ckb": "سلێمانی", "kmr": "Silêmanî" } },
+  "duhok": { "labels": { "en": "Duhok", "ar": "دهوك", "ckb": "دهۆک", "kmr": "Duhok" } },
+  "mosul": { "labels": { "en": "Mosul (Nineveh)", "ar": "الموصل", "ckb": "مووسڵ", "kmr": "Mûsil" } },
+  "kirkuk": { "labels": { "en": "Kirkuk", "ar": "كركوك", "ckb": "کەرکووک", "kmr": "Kerkûk" } },
+  "najaf": { "labels": { "en": "Najaf", "ar": "النجف", "ckb": "نەجەف", "kmr": "Necef" } },
+  "karbala": { "labels": { "en": "Karbala", "ar": "كربلاء", "ckb": "کەربەلا", "kmr": "Kerbela" } }
+}

@@ -1,0 +1,32 @@
+{
+  "entity_id": "intent_shop_locator",
+  "type": "intent",
+  "target_flow": "shop_locator_flow",
+  "names": { "en": "Find a shop / branch" },
+  "examples": {
+    "en": [
+      "where is the nearest Asiacell shop",
+      "asiacell branch near me",
+      "where can I replace my SIM in person"
+    ],
+    "ar": [
+      "وين اقرب فرع اسياسيل",
+      "اريد اروح لفرع قريب مني",
+      "وين اكدر ابدل السيم"
+    ],
+    "ckb": [
+      "نزیکترین لقی ئاسیاسێل لە کوێیە؟",
+      "لقێک لە نزیکم هەیە؟"
+    ],
+    "kmr": [
+      "Şaxa Asiacell a herî nêzîk li ku ye?",
+      "Li nêzîkî min şax heye?"
+    ]
+  },
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": { "review_note": "PLACEHOLDER utterances — replace with real ones from Laila logs." }
+}

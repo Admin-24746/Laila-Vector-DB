@@ -1,0 +1,36 @@
+{
+  "entity_id": "intent_complaint",
+  "type": "intent",
+  "target_flow": "complaint_flow",
+  "names": { "en": "Complaint / problem report" },
+  "examples": {
+    "en": [
+      "I want to file a complaint",
+      "my internet is not working",
+      "the network is very slow",
+      "you charged me twice, fix it"
+    ],
+    "ar": [
+      "اريد اقدم شكوى",
+      "النت ما يشتغل عندي",
+      "الشبكة ضعيفة كلش",
+      "انسحب مني رصيد مرتين"
+    ],
+    "ckb": [
+      "سکاڵام هەیە",
+      "ئینتەرنێتەکەم کار ناکات",
+      "تۆڕەکە زۆر خاوە"
+    ],
+    "kmr": [
+      "Ez dixwazim gilî bikim",
+      "Înterneta min naxebite",
+      "Tor gelek hêdî ye"
+    ]
+  },
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": { "review_note": "PLACEHOLDER utterances — replace with real ones from Laila logs." }
+}

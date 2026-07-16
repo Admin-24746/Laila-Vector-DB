@@ -1,0 +1,18 @@
+{
+  "_comment": "Copy to intent_<name>.json. target_flow must exist in data/vocab/flows.json. Write examples the way customers actually type (typos, dialect, romanized Kurdish included) — best source is real Laila logs (docs/09 §3). 4–8 per language is plenty to start.",
+  "entity_id": "intent_<name>",
+  "type": "intent",
+  "target_flow": "<flow_id from vocab/flows.json>",
+  "names": { "en": "<human label>" },
+  "examples": {
+    "en": [""],
+    "ar": [""],
+    "ckb": [""],
+    "kmr": [""]
+  },
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"]
+}

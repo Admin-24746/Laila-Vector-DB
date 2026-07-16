@@ -1,0 +1,10 @@
+{
+  "_comment": "Entity type taxonomy (docs/02 §2) — data, not code. Add new types here; no code change needed.",
+  "bundle": { "subtypes": ["atl", "btl", "corporate"] },
+  "service": { "subtypes": [] },
+  "terminology": { "subtypes": [] },
+  "intent": { "subtypes": [] },
+  "roaming": { "subtypes": [] },
+  "error": { "subtypes": [] },
+  "image_ref": { "subtypes": [] }
+}

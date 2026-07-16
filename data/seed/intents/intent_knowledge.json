@@ -1,0 +1,36 @@
+{
+  "entity_id": "intent_knowledge",
+  "type": "intent",
+  "target_flow": "knowledge_flow",
+  "names": { "en": "Bundle/service knowledge question" },
+  "examples": {
+    "en": [
+      "what is the combo bundle",
+      "how do I unsubscribe from combo",
+      "what internet bundles do you have",
+      "how much is the monthly internet bundle"
+    ],
+    "ar": [
+      "شنو باقة كومبو",
+      "شلون الغي اشتراك كومبو",
+      "شنو باقات النت عندكم",
+      "بيش باقة النت الشهرية"
+    ],
+    "ckb": [
+      "پاکێجی کۆمبۆ چییە؟",
+      "چۆن بەشداری کۆمبۆ هەڵدەوەشێنمەوە؟",
+      "چ پاکێجی ئینتەرنێتتان هەیە؟"
+    ],
+    "kmr": [
+      "Pakêja Combo çi ye?",
+      "Çawa abonetiya Combo betal bikim?",
+      "Çi pakêjên înternetê hene?"
+    ]
+  },
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": { "review_note": "PLACEHOLDER utterances — replace with real ones from Laila logs." }
+}

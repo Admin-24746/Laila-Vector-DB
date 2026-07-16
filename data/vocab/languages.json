@@ -1,0 +1,7 @@
+{
+  "_comment": "Language codes (docs/26). required:true languages gate authoring completeness (warning-level, docs/07 §4).",
+  "en": { "labels": { "en": "English" }, "required": true },
+  "ar": { "labels": { "en": "Arabic (Iraqi)", "ar": "العربية" }, "required": true },
+  "ckb": { "labels": { "en": "Kurdish — Sorani", "ckb": "کوردیی ناوەندی" }, "required": true },
+  "kmr": { "labels": { "en": "Kurdish — Badini/Kurmanji", "kmr": "Kurdî (Badînî)" }, "required": true }
+}

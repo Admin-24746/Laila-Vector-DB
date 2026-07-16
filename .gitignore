@@ -1,0 +1,5 @@
+node_modules/
+.env
+.ingest-state.json
+logs/
+eval/runs/

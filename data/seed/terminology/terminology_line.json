@@ -1,0 +1,26 @@
+{
+  "entity_id": "terminology_line",
+  "type": "terminology",
+  "subtype": null,
+  "names": {
+    "en": "Line / Primary Offer / Service Class",
+    "ar": "الخط / العرض الأساسي / فئة الخدمة",
+    "ckb": "هێڵ / ئۆفەری سەرەکی / پۆلی خزمەتگوزاری",
+    "kmr": "Xet / Ofera Bingehîn / Çîna Xizmetê"
+  },
+  "aliases": ["line", "primary offer", "service class", "الخط", "فئة الخدمة", "هێڵ"],
+  "description": {
+    "en": "\"Line\", \"primary offer\", and \"service class\" all refer to the same thing: the base tariff plan a SIM card is on (for example Red or Yooz). A customer's service class determines which bundles and offers they are eligible to buy.",
+    "ar": "«الخط» و«العرض الأساسي» و«فئة الخدمة» كلها تشير إلى نفس الشيء: خطة التعرفة الأساسية للشريحة (مثل رد أو يوز). فئة الخدمة تحدد أي باقات وعروض يمكن للزبون شراءها.",
+    "ckb": "«هێڵ» و«ئۆفەری سەرەکی» و«پۆلی خزمەتگوزاری» هەموویان هەمان شت دەگەیەنن: پلانی بنەڕەتی سیمکارت (وەک ڕێد یان یووز). پۆلی خزمەتگوزاری دیاری دەکات کام پاکێج بۆ کڕیار بەردەستە.",
+    "kmr": "«Xet», «ofera bingehîn» û «çîna xizmetê» hemû heman tişt in: plana bingehîn a SIM kartê (wek Red an Yooz). Çîna xizmetê diyar dike ka kîjan pakêj ji bo xerîdar berdest in."
+  },
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": {
+    "review_note": "From docs/02 §2 terminology example. ar/ckb/kmr machine-drafted — needs native review."
+  }
+}

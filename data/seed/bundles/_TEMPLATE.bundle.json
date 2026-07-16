@@ -1,0 +1,43 @@
+{
+  "_comment": "Copy to bundle_{bundleId}.json and fill in. Field contract: docs/25 §3. Units are normalized ints (D18): price in IQD, validity in days, data in MB (1GB=1024). Files starting with _ are ignored by ingestion. Style rules: docs/21.",
+  "entity_id": "bundle_<bundleId>",
+  "type": "bundle",
+  "subtype": "<atl|btl|corporate>",
+  "bundleId": 0,
+  "offerId": null,
+  "names": { "en": "", "ar": "", "ckb": "", "kmr": "" },
+  "aliases": ["<colloquial / romanized forms customers actually type>"],
+  "description": {
+    "en": "<what you get, duration, price — one self-contained answer>",
+    "ar": "", "ckb": "", "kmr": ""
+  },
+  "how_to": {
+    "subscribe": { "en": "", "ar": "", "ckb": "", "kmr": "" },
+    "unsubscribe": { "en": "", "ar": "", "ckb": "", "kmr": "" }
+  },
+  "price_iqd": 0,
+  "validity_days": 0,
+  "data_mb": null,
+  "minutes_onnet": null,
+  "minutes_offnet": null,
+  "sms_onnet": null,
+  "sms_offnet": null,
+  "display": {
+    "price": { "en": "", "ar": "", "ckb": "", "kmr": "" },
+    "validity": { "en": "", "ar": "", "ckb": "", "kmr": "" }
+  },
+  "eligible_service_classes": [],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "repeat_purchase_fee_iqd": null,
+  "repeat_purchase_threshold": null,
+  "belongs_to_service": null,
+  "conflicts_with": [],
+  "offers": [],
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"]
+}

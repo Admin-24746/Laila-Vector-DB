@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laila KB — Sandbox Console</title>
+<style>
+  :root { --bg:#0f1420; --panel:#171e2e; --line:#2a3550; --text:#e8ecf6; --dim:#93a0bd;
+          --accent:#5aa7ff; --ok:#3ecf8e; --warn:#f5b83d; --bad:#ff6b6b; --chip:#223052; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+         font:14px/1.5 system-ui, "Segoe UI", sans-serif; }
+  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:baseline; }
+  header h1 { font-size:16px; margin:0; }
+  header .sub { color:var(--dim); font-size:12px; }
+  #health { margin-inline-start:auto; font-size:12px; color:var(--dim); }
+  main { display:grid; grid-template-columns: 380px 1fr; gap:16px; padding:16px 20px; max-width:1280px; margin:0 auto; }
+  @media (max-width:900px){ main { grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
+  label { display:block; color:var(--dim); font-size:12px; margin:10px 0 4px; }
+  textarea, input, select { width:100%; background:#0d1220; color:var(--text); border:1px solid var(--line);
+    border-radius:8px; padding:8px 10px; font:inherit; }
+  textarea { resize:vertical; }
+  #query { min-height:64px; font-size:15px; }
+  #history { min-height:56px; font-size:12px; color:var(--dim); }
+  .row { display:flex; gap:8px; }
+  .row > * { flex:1; }
+  .btns { display:flex; gap:8px; margin-top:14px; }
+  button { flex:1; background:var(--chip); color:var(--text); border:1px solid var(--line);
+    border-radius:8px; padding:9px 0; font:inherit; font-weight:600; cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.primary { background:var(--accent); color:#0b1020; border-color:var(--accent); }
+  #out { display:flex; flex-direction:column; gap:12px; }
+  .chunk { border:1px solid var(--line); border-radius:8px; padding:10px 12px; }
+  .chunk .text { margin-top:6px; }
+  .meta { display:flex; flex-wrap:wrap; gap:6px; align-items:center; font-size:12px; color:var(--dim); }
+  .chip { background:var(--chip); border-radius:20px; padding:1px 9px; font-size:11.5px; }
+  .score { font-weight:700; color:var(--accent); }
+  .banner { border-radius:8px; padding:10px 14px; font-weight:600; }
+  .banner.route { background:#12301f; border:1px solid var(--ok); }
+  .banner.clarify { background:#33280f; border:1px solid var(--warn); }
+  .banner.fallback { background:#331616; border:1px solid var(--bad); }
+  .answer { font-size:15px; white-space:pre-wrap; }
+  .kv { font-size:12.5px; color:var(--dim); }
+  .kv b { color:var(--text); }
+  .lat { color:var(--dim); font-size:12px; }
+  .err { color:var(--bad); white-space:pre-wrap; }
+  [dir] { unicode-bidi:plaintext; }
+  h3 { margin:2px 0 4px; font-size:13px; color:var(--dim); font-weight:600; text-transform:uppercase; letter-spacing:.4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Laila Knowledge Base — Sandbox</h1>
+  <span class="sub">try it before it's live (docs/20 §4)</span>
+  <span id="health">checking health…</span>
+</header>
+<main>
+  <div class="panel">
+    <label for="query">Customer message</label>
+    <textarea id="query" dir="auto" placeholder="e.g. اكو رسوم اذا اشتركت بكومبو ثلث مرات بنفس الشهر؟"></textarea>
+
+    <div class="row">
+      <div>
+        <label for="lang">Language</label>
+        <select id="lang">
+          <option value="">auto-detect</option>
+          <option value="en">en — English</option>
+          <option value="ar">ar — Arabic (hard filter)</option>
+          <option value="ckb">ckb — Sorani (hard filter)</option>
+          <option value="kmr">kmr — Badini (hard filter)</option>
+        </select>
+      </div>
+      <div>
+        <label for="topk">Top-K</label>
+        <input id="topk" type="number" value="5" min="1" max="20">
+      </div>
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="loc">Filter: location</label>
+        <input id="loc" placeholder="e.g. baghdad">
+      </div>
+      <div>
+        <label for="sc">Filter: service class</label>
+        <input id="sc" placeholder="e.g. red">
+      </div>
+    </div>
+
+    <label for="history">History (optional — one turn per line, "user: …" / "laila: …")</label>
+    <textarea id="history" dir="auto" placeholder="user: tell me about the combo bundle&#10;laila: Combo gives you …"></textarea>
+
+    <div class="btns">
+      <button class="primary" onclick="run('retrieve')">Retrieve</button>
+      <button onclick="run('route')">Route</button>
+      <button onclick="run('answer')">Answer</button>
+    </div>
+  </div>
+
+  <div id="out" class="panel"><span class="kv">Results appear here. Retrieve = knowledge chunks · Route = dispatcher decision · Answer = grounded LLM reply.</span></div>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+fetch('/healthz').then(r => r.json()).then(h => {
+  $('health').innerHTML =
+    `qdrant ${h.qdrant ? '✅' : '❌'} · tei ${h.tei ? '✅' : '❌'} · llm ${h.llm ? '✅' : '⚪ off'} · ${h.points ?? '?'} chunks`;
+}).catch(() => { $('health').textContent = 'service unreachable'; });
+
+function parseHistory() {
+  return $('history').value.split('\n').map(l => l.trim()).filter(Boolean).map(l => {
+    const m = l.match(/^(user|laila|assistant)\s*:\s*(.*)$/i);
+    return m ? { role: m[1].toLowerCase() === 'user' ? 'user' : 'assistant', text: m[2] } : { role: 'user', text: l };
+  });
+}
+
+async function run(kind) {
+  const out = $('out');
+  out.innerHTML = '<span class="kv">…running</span>';
+  const body = { text: $('query').value, history: parseHistory(), top_k: Number($('topk').value) || 5, filters: {} };
+  if ($('lang').value) body.language = $('lang').value;
+  if ($('loc').value.trim()) body.filters.location = $('loc').value.trim();
+  if ($('sc').value.trim()) body.filters.service_class = $('sc').value.trim();
+  try {
+    const res = await fetch('/v1/' + kind, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) { out.innerHTML = `<div class="err">${esc(data.error)}\n${esc(data.detail ?? '')}</div>`; return; }
+    out.innerHTML = render[kind](data);
+  } catch (e) { out.innerHTML = `<div class="err">${esc(e.message)}</div>`; }
+}
+
+const qu = (d) => d.query_understanding?.rewritten
+  ? `<div class="kv">rewritten → <b dir="auto">${esc(d.query_understanding.rewritten)}</b> (${esc(d.query_understanding.language)})</div>`
+  : `<div class="kv">language: <b>${esc(d.query_understanding?.language ?? '?')}</b></div>`;
+
+const render = {
+  retrieve: (d) => `
+    <h3>Chunks</h3>${qu(d)}
+    ${d.chunks.map(c => `
+      <div class="chunk">
+        <div class="meta"><span class="score">${c.score.toFixed(3)}</span>
+          <span class="chip">${esc(c.section)}</span><span class="chip">${esc(c.language)}</span>
+          <span>${esc(c.chunk_id)}</span></div>
+        <div class="text" dir="auto">${esc(c.text)}</div>
+      </div>`).join('') || '<div class="kv">no chunks</div>'}
+    <h3>Grounded facts</h3>
+    <div class="kv">${esc(JSON.stringify(d.grounded_facts))}</div>
+    <div class="kv">bucket hint: <b>${esc(d.bucket_hint)}</b> <span class="lat">· ${d.latency_ms} ms</span></div>`,
+
+  route: (d) => `
+    <div class="banner ${esc(d.action)}">${esc(d.action.toUpperCase())}${d.flow ? ' → ' + esc(d.flow) : ''}
+      ${d.confidence != null ? ' · ' + d.confidence : ''}</div>
+    ${qu(d)}
+    <div class="kv">reason: ${esc(d.reason)}</div>
+    <div class="kv">suggested (shadow): <b>${esc(d.suggested_flow ?? '—')}</b></div>
+    <h3>Alternatives</h3>
+    ${(d.alternatives ?? []).map(a => `<div class="kv">${esc(a.flow)} — ${a.score}</div>`).join('') || '<div class="kv">none</div>'}
+    <div class="lat">${d.latency_ms} ms</div>`,
+
+  answer: (d) => `
+    <div class="banner ${d.grounded ? 'route' : 'clarify'}">${d.grounded ? 'GROUNDED ✅' : 'NOT GROUNDED — safe fallback served ⚠️'}</div>
+    ${qu(d)}
+    <h3>Answer</h3><div class="answer" dir="auto">${esc(d.answer)}</div>
+    <h3>Citations</h3>
+    <div class="meta">${(d.citations ?? []).map(c => `<span class="chip">${esc(c)}</span>`).join('') || '<span class="kv">none</span>'}</div>
+    <div class="kv">facts: ${esc(JSON.stringify(d.grounded_facts))}</div>
+    <div class="lat">${d.latency_ms} ms</div>`,
+};
+</script>
+</body>
+</html>

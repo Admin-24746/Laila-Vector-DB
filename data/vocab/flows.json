@@ -1,0 +1,9 @@
+{
+  "_comment": "⚠️ PLACEHOLDER (docs/14 CONFIRM) — canonical flow list the dispatcher routes to. Replace with the real Druid flow ids.",
+  "loan_flow": { "description": "Balance advance / loan requests" },
+  "btl_flow": { "description": "Personalized (below-the-line) offers" },
+  "complaint_flow": { "description": "Complaints and problem reports" },
+  "shop_locator_flow": { "description": "Find a shop/branch" },
+  "knowledge_flow": { "description": "Bundle/service questions answered from the knowledge base" },
+  "human_handoff": { "description": "Warm transfer to a live agent (docs/24)" }
+}

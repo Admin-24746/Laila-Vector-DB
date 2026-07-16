@@ -1,0 +1,41 @@
+{
+  "entity_id": "intent_loan",
+  "type": "intent",
+  "target_flow": "loan_flow",
+  "names": { "en": "Loan / balance advance" },
+  "examples": {
+    "en": [
+      "I need a loan",
+      "advance me some credit",
+      "can I borrow balance until I top up",
+      "give me an emergency loan"
+    ],
+    "ar": [
+      "احتاج قرض",
+      "سلفني رصيد",
+      "اريد سلفة",
+      "شلون اخذ قرض رصيد",
+      "ممكن تسلفوني لحد ما اعبي رصيد"
+    ],
+    "ckb": [
+      "پێویستم بە قەرزە",
+      "قەرزێکم بدەرێ",
+      "دەتوانم باڵانس قەرز بکەم؟",
+      "قەرزی باڵانسم دەوێت"
+    ],
+    "kmr": [
+      "Ez deynê dixwazim",
+      "Min deyn lazim e",
+      "Dikarim balansê deyn bikim?",
+      "ez dixwazim deyn bigirim"
+    ]
+  },
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": {
+    "review_note": "Core misroute case from docs/02 §2b ('loan sent to BTL'). Replace/extend with real customer utterances from Laila logs (docs/09 §3)."
+  }
+}

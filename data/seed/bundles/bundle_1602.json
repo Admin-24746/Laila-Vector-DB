@@ -1,0 +1,56 @@
+{
+  "entity_id": "bundle_1602",
+  "type": "bundle",
+  "subtype": "atl",
+  "bundleId": 1602,
+  "offerId": null,
+  "names": {
+    "en": "Super Net Monthly",
+    "ar": "سوبر نت الشهرية",
+    "ckb": "سوپەر نێتی مانگانە",
+    "kmr": "Super Net a Mehane"
+  },
+  "aliases": ["super net", "سوبر نت", "سوپەر نێت", "supernet", "super net monthly"],
+  "description": {
+    "en": "A monthly internet bundle: 10 GB of data valid for 30 days for 10,000 IQD.",
+    "ar": "باقة انترنت شهرية: 10 جيجابايت صالحة لمدة 30 يوم مقابل 10,000 دينار عراقي.",
+    "ckb": "پاکێجی ئینتەرنێتی مانگانە: 10 گێگابایت بۆ ماوەی 30 ڕۆژ بە 10,000 دیناری عێراقی.",
+    "kmr": "Pakêja înternetê ya mehane: 10 GB ji bo 30 rojan bi 10,000 dînarî."
+  },
+  "how_to": {
+    "subscribe": {
+      "en": "To subscribe, dial *321*1# or send NET10 to 1234.",
+      "ar": "للاشتراك، اطلب *321*1# أو أرسل NET10 إلى 1234.",
+      "ckb": "بۆ بەشداریکردن، *321*1# لێبدە یان NET10 بنێرە بۆ 1234.",
+      "kmr": "Ji bo aboneyê, *321*1# bigire yan NET10 bişîne bo 1234."
+    },
+    "unsubscribe": {
+      "en": "To unsubscribe, send STOP NET10 to 1234.",
+      "ar": "لإلغاء الاشتراك، أرسل STOP NET10 إلى 1234.",
+      "ckb": "بۆ هەڵوەشاندنەوە، STOP NET10 بنێرە بۆ 1234.",
+      "kmr": "Ji bo betalkirinê, STOP NET10 bişîne bo 1234."
+    }
+  },
+  "price_iqd": 10000,
+  "validity_days": 30,
+  "data_mb": 10240,
+  "display": {
+    "price": { "en": "10,000 IQD", "ar": "10,000 دينار عراقي", "ckb": "10,000 دیناری عێراقی", "kmr": "10,000 dînar" },
+    "validity": { "en": "30 Days", "ar": "30 يوم", "ckb": "30 ڕۆژ", "kmr": "30 roj" }
+  },
+  "eligible_service_classes": [],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": null,
+  "conflicts_with": ["bundle_1603"],
+  "offers": [],
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": {
+    "review_note": "PLACEHOLDER entity — invented values and shortcodes; replace with a real ATL internet bundle from the catalogue (seed-20, docs/07 §9)."
+  }
+}

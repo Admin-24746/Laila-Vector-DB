@@ -1,0 +1,56 @@
+{
+  "entity_id": "bundle_1603",
+  "type": "bundle",
+  "subtype": "atl",
+  "bundleId": 1603,
+  "offerId": null,
+  "names": {
+    "en": "Weekly Net",
+    "ar": "نت الأسبوع",
+    "ckb": "نێتی هەفتانە",
+    "kmr": "Neta Hefteyî"
+  },
+  "aliases": ["weekly net", "نت اسبوعي", "نێتی هەفتانە", "weekly internet"],
+  "description": {
+    "en": "A weekly internet bundle: 2 GB of data valid for 7 days for 3,000 IQD.",
+    "ar": "باقة انترنت أسبوعية: 2 جيجابايت صالحة لمدة 7 أيام مقابل 3,000 دينار عراقي.",
+    "ckb": "پاکێجی ئینتەرنێتی هەفتانە: 2 گێگابایت بۆ ماوەی 7 ڕۆژ بە 3,000 دیناری عێراقی.",
+    "kmr": "Pakêja înternetê ya hefteyî: 2 GB ji bo 7 rojan bi 3,000 dînarî."
+  },
+  "how_to": {
+    "subscribe": {
+      "en": "To subscribe, dial *321*2# or send NET2 to 1234.",
+      "ar": "للاشتراك، اطلب *321*2# أو أرسل NET2 إلى 1234.",
+      "ckb": "بۆ بەشداریکردن، *321*2# لێبدە یان NET2 بنێرە بۆ 1234.",
+      "kmr": "Ji bo aboneyê, *321*2# bigire yan NET2 bişîne bo 1234."
+    },
+    "unsubscribe": {
+      "en": "To unsubscribe, send STOP NET2 to 1234.",
+      "ar": "لإلغاء الاشتراك، أرسل STOP NET2 إلى 1234.",
+      "ckb": "بۆ هەڵوەشاندنەوە، STOP NET2 بنێرە بۆ 1234.",
+      "kmr": "Ji bo betalkirinê, STOP NET2 bişîne bo 1234."
+    }
+  },
+  "price_iqd": 3000,
+  "validity_days": 7,
+  "data_mb": 2048,
+  "display": {
+    "price": { "en": "3,000 IQD", "ar": "3,000 دينار عراقي", "ckb": "3,000 دیناری عێراقی", "kmr": "3,000 dînar" },
+    "validity": { "en": "7 Days", "ar": "7 أيام", "ckb": "7 ڕۆژ", "kmr": "7 roj" }
+  },
+  "eligible_service_classes": [],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": null,
+  "conflicts_with": ["bundle_1602"],
+  "offers": [],
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": {
+    "review_note": "PLACEHOLDER entity — invented values and shortcodes; replace with a real weekly internet bundle (seed-20, docs/07 §9)."
+  }
+}

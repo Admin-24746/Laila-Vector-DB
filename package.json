@@ -1,0 +1,26 @@
+{
+  "name": "laila-knowledge-base",
+  "version": "0.1.0",
+  "description": "Laila Knowledge Base — RAG retrieval + semantic routing engine for Asiacell bundle/service knowledge (see docs/)",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "ingest": "node src/ingest/run.js",
+    "ingest:rebuild": "node src/ingest/run.js --rebuild",
+    "ingest:dry": "node src/ingest/run.js --dry-run",
+    "serve": "node src/service/server.js",
+    "eval": "node src/eval/run.js",
+    "eval:sweep": "node src/eval/run.js --sweep",
+    "gaps": "node src/eval/gaps.js",
+    "sanity:kurdish": "node scripts/sanity-kurdish.js",
+    "stack:up": "docker compose up -d",
+    "stack:down": "docker compose down"
+  },
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.15.0",
+    "fastify": "^5.6.0"
+  }
+}

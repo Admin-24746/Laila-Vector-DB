@@ -1,0 +1,32 @@
+{
+  "entity_id": "intent_btl",
+  "type": "intent",
+  "target_flow": "btl_flow",
+  "names": { "en": "Personalized (BTL) offers" },
+  "examples": {
+    "en": [
+      "do I have any special offers",
+      "what offers are available for my number",
+      "show me my personalized offers"
+    ],
+    "ar": [
+      "عندي عروض خاصة؟",
+      "شنو العروض المتوفرة الي",
+      "شوفلي العروض على رقمي"
+    ],
+    "ckb": [
+      "هیچ ئۆفەرێکی تایبەتم هەیە؟",
+      "چ ئۆفەرێک بۆ ژمارەکەم هەیە؟"
+    ],
+    "kmr": [
+      "Ji bo min ofer hene?",
+      "Ji bo hejmara min çi ofer hene?"
+    ]
+  },
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": { "review_note": "PLACEHOLDER utterances — replace with real ones from Laila logs." }
+}

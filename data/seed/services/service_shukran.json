@@ -1,0 +1,38 @@
+{
+  "entity_id": "service_shukran",
+  "type": "service",
+  "subtype": null,
+  "names": {
+    "en": "Shukran",
+    "ar": "شكراً",
+    "ckb": "شوکران",
+    "kmr": "Şukran"
+  },
+  "aliases": ["shukran", "شكرا", "شکران", "shukran rewards"],
+  "description": {
+    "en": "Shukran is Asiacell's rewards program (PLACEHOLDER — replace with the real definition: what it is, how points are earned, and how they are redeemed).",
+    "ar": "شكراً هو برنامج مكافآت أسياسيل (نص مؤقت — استبدله بالتعريف الحقيقي: ما هو، كيف تُكسب النقاط، وكيف تُستبدل).",
+    "ckb": "شوکران پرۆگرامی خەڵاتەکانی ئاسیاسێلە (دەقی کاتی — بیگۆڕە بە پێناسەی ڕاستەقینە).",
+    "kmr": "Şukran bernameya xelatan a Asiacell e (nivîsa demkî — bi pênaseya rast biguherîne)."
+  },
+  "how_to": {
+    "subscribe": {
+      "en": "To join Shukran, send SHUKRAN to 333 (PLACEHOLDER shortcode).",
+      "ar": "للانضمام إلى شكراً، أرسل SHUKRAN إلى 333 (رمز مؤقت).",
+      "ckb": "بۆ بەشداریکردن لە شوکران، SHUKRAN بنێرە بۆ 333 (کۆدی کاتی).",
+      "kmr": "Ji bo tevlêbûna Şukran, SHUKRAN bişîne bo 333 (koda demkî)."
+    }
+  },
+  "eligible_service_classes": [],
+  "eligible_locations": [],
+  "belongs_to_service": null,
+  "conflicts_with": [],
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-15T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "attributes": {
+    "review_note": "PLACEHOLDER — 'Shukran' is named in docs/02 as an example service but its real definition is unknown. Replace all text with the real service details before status:verified."
+  }
+}
