@@ -5,7 +5,10 @@ import { QdrantClient } from '@qdrant/js-client-rest';
 import { createHash } from 'node:crypto';
 import { CONFIG } from './config.js';
 
-export const qdrant = new QdrantClient({ url: CONFIG.qdrantUrl });
+// Per-request timeout (client default is 300 s): a hung Qdrant must fail fast so the
+// service can 503 and Druid falls back (docs/06 §7). Generous vs the docs/08 §5 latency
+// budget; ingestion calls (upsert wait:true, index creation) fit comfortably too.
+export const qdrant = new QdrantClient({ url: CONFIG.qdrantUrl, timeout: CONFIG.qdrantTimeoutMs });
 
 // Qdrant point IDs must be integers or UUIDs, so the human chunk key
 // ("bundle_1601::overview::en") is hashed into a stable UUID; the key itself

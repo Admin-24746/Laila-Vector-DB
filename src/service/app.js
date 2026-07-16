@@ -12,6 +12,7 @@ import { appendFile, mkdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CONFIG, ROOT_DIR } from '../lib/config.js';
+import { DependencyError } from '../lib/errors.js';
 import { qdrantHealthy, countPoints } from '../lib/qdrant.js';
 import { embedderHealthy } from '../lib/embedder.js';
 import { llmConfigured } from '../lib/llm.js';
@@ -43,6 +44,29 @@ export function buildApp(overrides = {}) {
   };
 
   const app = Fastify({ logger: false });
+
+  // Failure contract (docs/06 §7, docs/08 §5 "graceful failure"): a dependency dying or
+  // hanging mid-request must surface promptly as machine-readable JSON — 503 + WHICH
+  // dependency — so Druid falls back to its current logic instead of hanging on us.
+  // (Malformed-but-parseable requests never reach here: handlers answer those inline.)
+  app.setErrorHandler(async (err, req, reply) => {
+    if (err instanceof DependencyError) {
+      await deps.audit({
+        endpoint: req.url, error: 'dependency_unavailable',
+        dependency: err.dependency, detail: err.detail,
+      });
+      reply.code(503);
+      return { error: 'dependency_unavailable', dependency: err.dependency, detail: err.detail };
+    }
+    if (err.statusCode && err.statusCode < 500) {
+      // Fastify framework errors (unparseable JSON body, etc.) keep their status
+      reply.code(err.statusCode);
+      return { error: 'bad_request', detail: err.message };
+    }
+    await deps.audit({ endpoint: req.url, error: 'internal_error', detail: err.message });
+    reply.code(500);
+    return { error: 'internal_error', detail: err.message };
+  });
 
   app.addHook('onRequest', async (req, reply) => {
     if (!deps.serviceToken || !req.url.startsWith('/v1/')) return;

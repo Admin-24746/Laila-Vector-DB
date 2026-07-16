@@ -3,6 +3,7 @@
 // in production are a .env change, never a code change (docs/15 §6).
 
 import { CONFIG } from './config.js';
+import { DependencyError } from './errors.js';
 
 export function llmConfigured() {
   return Boolean(CONFIG.llm.baseUrl && CONFIG.llm.model);
@@ -25,16 +26,25 @@ export async function chat(messages, { temperature = 0.2, maxTokens = 900, timeo
       i === lastUser ? { ...m, content: `${m.content} /no_think` } : m,
     );
   }
-  const res = await fetch(`${CONFIG.llm.baseUrl}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      ...(CONFIG.llm.apiKey ? { authorization: `Bearer ${CONFIG.llm.apiKey}` } : {}),
-    },
-    body: JSON.stringify({ model: CONFIG.llm.model, messages: finalMessages, temperature, max_tokens: maxTokens }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text()}`);
+  let res;
+  try {
+    res = await fetch(`${CONFIG.llm.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...(CONFIG.llm.apiKey ? { authorization: `Bearer ${CONFIG.llm.apiKey}` } : {}),
+      },
+      body: JSON.stringify({ model: CONFIG.llm.model, messages: finalMessages, temperature, max_tokens: maxTokens }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+  } catch (err) {
+    // Unreachable/timed-out LLM → typed error (docs/06 §7). Callers degrade — rewrite
+    // failure falls back to the raw query (docs/12 §7), compose failure to the guardrail
+    // fallback (docs/08 §3) — and if it ever escapes, the service error handler still
+    // answers a clean 503 instead of a hang.
+    throw DependencyError.wrap('llm', err);
+  }
+  if (!res.ok) throw new DependencyError('llm', `LLM ${res.status}: ${await res.text()}`);
   const data = await res.json();
   const choice = data.choices?.[0];
   if (choice?.finish_reason === 'length') {
