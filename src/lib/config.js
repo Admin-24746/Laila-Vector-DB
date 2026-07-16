@@ -20,6 +20,11 @@ export const CONFIG = {
   port: Number(process.env.PORT ?? 8090),
   serviceToken: process.env.SERVICE_TOKEN || null,
   topK: Number(process.env.TOP_K ?? 5),
+  // Query-time dependency timeouts, ms (docs/06 §7): a hung TEI/Qdrant must fail fast
+  // (→ 503, Druid falls back) rather than hang Druid. Ingestion keeps its own larger
+  // embed ceiling (see lib/embedder.js).
+  embedTimeoutMs: Number(process.env.EMBED_TIMEOUT_MS ?? 10_000),
+  qdrantTimeoutMs: Number(process.env.QDRANT_TIMEOUT_MS ?? 10_000),
   // Routing thresholds (docs/06 §5, D7) — cosine scale; calibrated via `npm run eval:sweep`.
   route: {
     tauHigh: Number(process.env.ROUTE_TAU_HIGH ?? 0.8),

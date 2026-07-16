@@ -5,6 +5,7 @@ import { CONFIG } from '../lib/config.js';
 import { embedOne } from '../lib/embedder.js';
 import { sparseVector } from '../lib/sparse.js';
 import { qdrant } from '../lib/qdrant.js';
+import { DependencyError } from '../lib/errors.js';
 
 export const KNOWLEDGE_TYPES = ['bundle', 'service', 'roaming', 'terminology', 'error'];
 
@@ -59,7 +60,13 @@ export async function retrieve(text, {
     body = { prefetch, query: { fusion: 'rrf' }, limit: topK, with_payload: true };
   }
 
-  const res = await qdrant.query(CONFIG.collection, body);
+  let res;
+  try {
+    res = await qdrant.query(CONFIG.collection, body);
+  } catch (err) {
+    // Down/hung Qdrant → typed error; the service maps it to 503 (docs/06 §7, docs/08 §5)
+    throw DependencyError.wrap('qdrant', err);
+  }
   return res.points.map((p) => ({
     chunk_id: p.payload.chunk_id,
     entity_id: p.payload.entity_id,
@@ -98,16 +105,21 @@ export function bucketHint(results) {
 // Small-to-big expansion (docs/03 §4.4): fetch every section of an entity in one language
 // so the LLM can see the full entity card without sacrificing match precision.
 export async function entityCard(entityId, language) {
-  const res = await qdrant.scroll(CONFIG.collection, {
-    filter: {
-      must: [
-        { key: 'entity_id', match: { value: entityId } },
-        { key: 'language', match: { value: language } },
-      ],
-    },
-    limit: 32,
-    with_payload: true,
-  });
+  let res;
+  try {
+    res = await qdrant.scroll(CONFIG.collection, {
+      filter: {
+        must: [
+          { key: 'entity_id', match: { value: entityId } },
+          { key: 'language', match: { value: language } },
+        ],
+      },
+      limit: 32,
+      with_payload: true,
+    });
+  } catch (err) {
+    throw DependencyError.wrap('qdrant', err); // docs/06 §7 — expand fails like search fails
+  }
   const order = ['overview', 'definition', 'subscribe', 'unsubscribe', 'eligibility', 'fees_edgecases', 'conflicts'];
   return res.points
     .map((p) => p.payload)
