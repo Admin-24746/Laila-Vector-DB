@@ -6,6 +6,7 @@ import { chat } from '../lib/llm.js';
 import { normalizeDigits } from '../lib/normalize.js';
 import {
   ANSWER_SYSTEM, STRICT_RETRY_NOTE, NOT_FOUND, SAFE_FALLBACK, languageName, ANSWER_PROMPT_VERSION,
+  PROMPT_LEAK_MARKERS,
 } from './prompts.js';
 
 export { ANSWER_PROMPT_VERSION };
@@ -26,6 +27,15 @@ function allowedNumbers(results, facts) {
 export function unsupportedNumbers(answer, results, facts) {
   const allowed = allowedNumbers(results, facts);
   return [...numbersIn(answer)].filter((n) => !allowed.has(n));
+}
+
+// Output leak-guard (docs/17 §2.4 last line): a distinctive prompt fragment in the answer
+// means the model is echoing its instructions (extraction/jailbreak got through the
+// hardened prompt). Deterministic — never trusts the model to police itself.
+export function promptLeakViolations(answer) {
+  return PROMPT_LEAK_MARKERS
+    .filter((m) => answer.includes(m))
+    .map((m) => `prompt_leak: "${m.slice(0, 30)}…"`);
 }
 
 function buildSystem({ results, facts, language }) {
@@ -62,12 +72,12 @@ export async function composeAnswer({ question, results, facts, language }) {
     }
   };
 
-  // Guardrail (docs/08 §3): verify every number (and that a complete answer exists)
-  // → one strict retry → safe fallback.
+  // Guardrail (docs/08 §3 + docs/17 §2.4): verify every number, no prompt leakage,
+  // and that a complete answer exists → one strict retry → safe fallback.
   const problems = (a) => {
     if (typeof a !== 'string') return [`llm_error: ${a.error}`];
     if (!a.trim()) return ['empty_answer'];
-    return unsupportedNumbers(a, results, facts);
+    return [...unsupportedNumbers(a, results, facts), ...promptLeakViolations(a)];
   };
 
   let answer = await attempt(system, { temperature: 0.2 });

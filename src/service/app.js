@@ -18,8 +18,10 @@ import { embedderHealthy } from '../lib/embedder.js';
 import { llmConfigured } from '../lib/llm.js';
 import { groundedFacts, bucketHint, entityCard } from './retrieve.js';
 import { routeMessage } from './route.js';
-import { understandQuery, mergedRetrieve, LANG_CODES } from './understand.js';
+import { understandQuery, mergedRetrieve, detectLanguage, LANG_CODES } from './understand.js';
 import { composeAnswer } from './answer.js';
+import { detectInjection } from './safety.js';
+import { INJECTION_DEFLECTION } from './prompts.js';
 
 const LOG_DIR = path.join(ROOT_DIR, 'logs');
 
@@ -38,7 +40,7 @@ const CONSOLE_HTML = await readFile(
 export function buildApp(overrides = {}) {
   const deps = {
     understandQuery, mergedRetrieve, routeMessage, composeAnswer, entityCard,
-    llmConfigured, qdrantHealthy, embedderHealthy, countPoints,
+    detectInjection, llmConfigured, qdrantHealthy, embedderHealthy, countPoints,
     audit: auditToFile, serviceToken: CONFIG.serviceToken,
     ...overrides,
   };
@@ -152,7 +154,35 @@ export function buildApp(overrides = {}) {
     const { text, language, history = [], filters = {}, top_k } = req.body ?? {};
     if (!text) return { error: 'text is required' };
 
+    // Input-side injection filter (docs/17 §2.1): a clear override/canary attempt is
+    // deflected deterministically — BEFORE understandQuery, so attacker text never
+    // reaches the rewrite LLM and no model output can be echoed back (2026-07-19
+    // review). History turns are scanned too: an injection can hide in prior context
+    // (docs/17 §2.3). Same response shape as a normal answer (docs/08 §2).
+    const injectedTurn = deps.detectInjection(text)
+      ? 'text'
+      : history.find((h) => deps.detectInjection(h?.text)) ? 'history' : null;
+    if (injectedTurn) {
+      const lang = LANG_CODES.includes(language) ? language : detectLanguage(text);
+      const response = {
+        answer: INJECTION_DEFLECTION[lang] ?? INJECTION_DEFLECTION.en,
+        grounded: true,
+        citations: [],
+        grounded_facts: {},
+        bucket_hint: null,
+        query_understanding: { language: lang, rewritten: null },
+        latency_ms: Date.now() - t0,
+      };
+      await deps.audit({
+        endpoint: '/v1/answer', text, language: lang, rewritten: null,
+        safety: 'injection_blocked', injection_source: injectedTurn,
+        grounded: true, latency_ms: response.latency_ms,
+      });
+      return response;
+    }
+
     const u = await deps.understandQuery(text, history, language);
+
     const results = await deps.mergedRetrieve(u, { topK: top_k ?? CONFIG.topK, filters });
     const facts = groundedFacts(results);
     const composed = await deps.composeAnswer({
