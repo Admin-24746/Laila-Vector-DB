@@ -77,6 +77,21 @@ All five review findings addressed in `safety.js` + `app.js`, each pinned in
 Verified live end-to-end: the review's false positives all answer normally, the
 previously-missed injections deflect deterministically; smoke test green.
 
+Also in this session:
+
+- **CI is GREEN for the first time** (`e37bd5f`). The GitHub Actions unit gate had failed
+  on every run since the workflow landed: the "hung TEI" resilience test's mocked fetch
+  pended only on `AbortSignal.timeout`'s timer, which Node **unrefs** — on idle ubuntu
+  runners the event loop drained before the abort fired and node:test cancelled tests
+  50–52 (`cancelledByParent`). Passed locally on Windows, so it was never noticed. Fix:
+  the mock holds a ref'd keep-alive timer, standing in for the socket handle a real
+  fetch would hold. Verified: the run on `e37bd5f` concluded `success`.
+- **Ops guide for teammates**: `operations vector data base.docx` (repo root,
+  untracked) — a beginner-level Word walkthrough of start-up, the sandbox console
+  (incl. token setup), the API, adding/editing seed data, quality checks, and
+  troubleshooting. Regenerate from a future session by asking for the operations
+  guide; source of truth for procedures remains this README + `docs/`.
+
 ### 2026-07-16 evening (4th session) — now committed (see git log)
 
 15 modified files + 2 new (`src/service/safety.js`, `test/safety.test.js`):
