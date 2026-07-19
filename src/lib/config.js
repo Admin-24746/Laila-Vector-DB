@@ -37,6 +37,9 @@ export const CONFIG = {
     baseUrl: process.env.LLM_BASE_URL || null,
     apiKey: process.env.LLM_API_KEY || null,
     model: process.env.LLM_MODEL || null,
+    // Optional separate model for the docs/12 follow-up rewrite call only (probed:
+    // small models garble Iraqi-Arabic rewrites; a bigger one may pass the anchor guard).
+    rewriteModel: process.env.LLM_REWRITE_MODEL || null,
     // Qwen3-style thinking models burn the token budget inside <think> and return nothing.
     // "/no_think" is Qwen's soft switch; harmless plain text if sent to other models.
     noThink: process.env.LLM_NO_THINK != null

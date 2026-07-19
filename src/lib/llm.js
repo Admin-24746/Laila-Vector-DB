@@ -16,7 +16,7 @@ const stripThink = (s) => s.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
  * @param {{role:'system'|'user'|'assistant', content:string}[]} messages
  * @returns {Promise<string>}
  */
-export async function chat(messages, { temperature = 0.2, maxTokens = 900, timeoutMs = 60_000 } = {}) {
+export async function chat(messages, { temperature = 0.2, maxTokens = 900, timeoutMs = 60_000, model } = {}) {
   if (!llmConfigured()) throw new Error('LLM not configured (set LLM_BASE_URL and LLM_MODEL in .env)');
   let finalMessages = messages;
   if (CONFIG.llm.noThink) {
@@ -34,7 +34,7 @@ export async function chat(messages, { temperature = 0.2, maxTokens = 900, timeo
         'content-type': 'application/json',
         ...(CONFIG.llm.apiKey ? { authorization: `Bearer ${CONFIG.llm.apiKey}` } : {}),
       },
-      body: JSON.stringify({ model: CONFIG.llm.model, messages: finalMessages, temperature, max_tokens: maxTokens }),
+      body: JSON.stringify({ model: model ?? CONFIG.llm.model, messages: finalMessages, temperature, max_tokens: maxTokens }),
       signal: AbortSignal.timeout(timeoutMs),
     });
   } catch (err) {

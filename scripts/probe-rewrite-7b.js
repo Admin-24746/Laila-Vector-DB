@@ -2,35 +2,13 @@
 // well enough to pass the anchoring guard, where qwen2.5:3b garbles them and fails safe?
 // Evidence-gathering only — changes no code. Run with Ollama up:
 //   node scripts/probe-rewrite-7b.js
-// Reuses the EXACT rewrite prompt + anchoring logic from src/service/understand.js so the
-// comparison is apples-to-apples; if that logic changes, mirror it here.
+// Imports the REAL rewrite prompt + anchoring logic from src/service/understand.js so the
+// comparison is always apples-to-apples with production.
+
+import { rewritePrompt, detectLanguage, anchorRatio } from '../src/service/understand.js';
 
 const OLLAMA = process.env.OLLAMA_URL ?? 'http://127.0.0.1:11434/v1';
 const MODELS = ['qwen2.5:3b-instruct', 'qwen2.5:7b-instruct'];
-
-// --- copied verbatim from understand.js (keep in sync) -----------------------
-const REWRITE_SYSTEM = `You rewrite a customer's follow-up message into ONE standalone question, using the conversation for context.
-Rules:
-- Resolve pronouns/references ("it", "هذا", "ئەوە"…) to the concrete thing discussed.
-- Write the standalone question in the SAME language, script and dialect as the follow-up message — copy its words where possible. Never translate.
-- Do not answer the question. Do not add information that is not implied.
-- Reply with ONLY this JSON: {"standalone_query": "..."}
-
-Example:
-Conversation:
-Customer: tell me about roaming
-Laila: Roaming lets you use your Asiacell line abroad.
-Follow-up message: how much is it?
-Reply: {"standalone_query": "how much does roaming cost?"}`;
-
-const TOKEN_SPLIT = /[\s؟?!.,،:؛;'"()\[\]{}«»…-]+/;
-function anchorRatio(clean, corpus) {
-  const tokens = clean.toLowerCase().split(TOKEN_SPLIT).filter((t) => t.length >= 2);
-  if (!tokens.length) return 0;
-  const hay = corpus.toLowerCase();
-  return tokens.filter((t) => hay.includes(t)).length / tokens.length;
-}
-// -----------------------------------------------------------------------------
 
 // The known-failing smoke case + a couple more Iraqi-Arabic follow-ups.
 const CASES = [
@@ -72,7 +50,7 @@ async function rewrite(model, text, history) {
       temperature: 0,
       max_tokens: 400,
       messages: [
-        { role: 'system', content: REWRITE_SYSTEM },
+        { role: 'system', content: rewritePrompt(detectLanguage(text)) },
         { role: 'user', content: `Conversation:\n${turns}\n\nFollow-up message: ${text}` },
       ],
     }),

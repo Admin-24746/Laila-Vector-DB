@@ -4,6 +4,8 @@
 // and any rewrite failure falls back to the raw query — never blocks retrieval (§7).
 
 import { chat, extractJson, llmConfigured } from '../lib/llm.js';
+import { normalizeForSparse } from '../lib/normalize.js';
+import { CONFIG } from '../lib/config.js';
 import { retrieve } from './retrieve.js';
 
 export const LANG_CODES = ['en', 'ar', 'ckb', 'kmr'];
@@ -43,23 +45,41 @@ export function isFollowUp(text, history) {
   return words <= 6 && ELLIPTICAL_START.test(text.trim());
 }
 
-// Prompt tuned for small local models (probed against qwen2.5:3b-instruct, 2026-07-16):
-// a worked example is what makes it reliably resolve the reference instead of echoing;
-// an Arabic example made it COPY the example's intent into Arabic rewrites, so English
-// example only, and the guards below make bad rewrites fail safe.
-const REWRITE_SYSTEM = `You rewrite a customer's follow-up message into ONE standalone question, using the conversation for context.
+// Prompt tuned for small local models (probed against qwen2.5:3b-instruct, 2026-07-16,
+// twice): a worked example is what makes it reliably resolve the reference instead of
+// echoing — but the example must MATCH the follow-up's language. A static Arabic example
+// made the model COPY the example verbatim into English rewrites, and an English-only
+// example left Iraqi-Arabic rewrites garbled (anchor-rejected → raw, the old ar
+// limitation). Language-matched examples fixed 4/5 Arabic probe cases; the 5th (intent
+// copied from the example) is caught by the anchoring guard (its verb isn't in the
+// conversation → reject → raw). ckb/kmr keep the English example (probed: harmless
+// near-raw or correct rewrites). qwen2.5:7b was probed too and is worse: it drifts to
+// Chinese/English (V0) or mixed-script garbage (with the ar example) — see
+// scripts/probe-rewrite-7b.js.
+export const REWRITE_SYSTEM = `You rewrite a customer's follow-up message into ONE standalone question, using the conversation for context.
 Rules:
 - Resolve pronouns/references ("it", "هذا", "ئەوە"…) to the concrete thing discussed.
 - Write the standalone question in the SAME language, script and dialect as the follow-up message — copy its words where possible. Never translate.
 - Do not answer the question. Do not add information that is not implied.
-- Reply with ONLY this JSON: {"standalone_query": "..."}
+- Reply with ONLY this JSON: {"standalone_query": "..."}`;
 
-Example:
+const REWRITE_EXAMPLE = {
+  en: `Example:
 Conversation:
 Customer: tell me about roaming
 Laila: Roaming lets you use your Asiacell line abroad.
 Follow-up message: how much is it?
-Reply: {"standalone_query": "how much does roaming cost?"}`;
+Reply: {"standalone_query": "how much does roaming cost?"}`,
+  ar: `Example:
+Conversation:
+Customer: شنو باقة سوبر نت؟
+Laila: باقة سوبر نت تنطيك 10 غيغابايت شهرياً بـ10,000 دينار.
+Follow-up message: وشلون اشترك بيها؟
+Reply: {"standalone_query": "وشلون اشترك بباقة سوبر نت؟"}`,
+};
+
+export const rewritePrompt = (language) =>
+  `${REWRITE_SYSTEM}\n\n${REWRITE_EXAMPLE[language] ?? REWRITE_EXAMPLE.en}`;
 
 const CJK = /[぀-ヿ㐀-䶿一-鿿]/;
 const LATIN_LETTER = /[a-z]/i;
@@ -68,22 +88,26 @@ const TOKEN_SPLIT = /[\s؟?!.,،:؛;'"()\[\]{}«»…-]+/;
 // Anchoring guard: a rewrite only resolves references, so nearly all of its words must
 // already occur in the conversation. Rejects hallucinated/garbled rewrites (observed:
 // qwen2.5:3b mangles Iraqi Arabic or substitutes a different question entirely).
-function isAnchored(clean, corpus) {
-  const tokens = clean.toLowerCase().split(TOKEN_SPLIT).filter((t) => t.length >= 2);
-  if (!tokens.length) return false;
-  const hay = corpus.toLowerCase();
-  const hits = tokens.filter((t) => hay.includes(t)).length;
-  return hits / tokens.length >= 0.6;
+// Both sides are orthography-folded (normalizeForSparse: أ→ا, ى→ي, ة→ه…) so a correct
+// rewrite that shifts dialect spelling (ألغى vs الغيها) still anchors — probed 2026-07-16:
+// raw matching rejected 7B's semantically-correct combo-cancel rewrite at 0.50.
+export function anchorRatio(clean, corpus) {
+  const tokens = normalizeForSparse(clean).split(TOKEN_SPLIT).filter((t) => t.length >= 2);
+  if (!tokens.length) return 0;
+  const hay = normalizeForSparse(corpus);
+  return tokens.filter((t) => hay.includes(t)).length / tokens.length;
 }
 
-async function rewriteFollowUp(text, history) {
+const isAnchored = (clean, corpus) => anchorRatio(clean, corpus) >= 0.6;
+
+async function rewriteFollowUp(text, history, language) {
   const turns = history.slice(-6)
     .map((t) => `${t.role === 'assistant' ? 'Laila' : 'Customer'}: ${t.text ?? t.content ?? ''}`)
     .join('\n');
   const out = await chat([
-    { role: 'system', content: REWRITE_SYSTEM },
+    { role: 'system', content: rewritePrompt(language) },
     { role: 'user', content: `Conversation:\n${turns}\n\nFollow-up message: ${text}` },
-  ], { temperature: 0, maxTokens: 400, timeoutMs: 15_000 });
+  ], { temperature: 0, maxTokens: 400, timeoutMs: 15_000, model: CONFIG.llm.rewriteModel ?? undefined });
   const q = extractJson(out)?.standalone_query;
   if (typeof q !== 'string') return null;
   const clean = q.trim();
@@ -109,7 +133,7 @@ export async function understandQuery(text, history = [], languageHint) {
   let rewritten = null;
   if (llmConfigured() && isFollowUp(text, history)) {
     try {
-      rewritten = await rewriteFollowUp(text, history);
+      rewritten = await rewriteFollowUp(text, history, language);
     } catch {
       rewritten = null; // LLM slow/down → raw query (docs/12 §7)
     }
