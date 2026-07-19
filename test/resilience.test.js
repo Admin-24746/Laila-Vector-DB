@@ -206,9 +206,17 @@ test('embedOne: hung TEI aborts at CONFIG.embedTimeoutMs, not 120 s', async (t) 
   const saved = CONFIG.embedTimeoutMs;
   CONFIG.embedTimeoutMs = 30;
   t.after(() => { CONFIG.embedTimeoutMs = saved; });
-  // fetch that never responds but honors the abort signal — a hung socket
+  // fetch that never responds but honors the abort signal — a hung socket. The ref'd
+  // keep-alive timer stands in for the socket handle a real fetch would hold: without
+  // it the only pending timer is AbortSignal.timeout's, which Node unrefs, so on an
+  // otherwise-idle loop (CI) the process drains before the abort ever fires and
+  // node:test cancels this test and everything after it (observed on ubuntu runners).
   t.mock.method(globalThis, 'fetch', (url, opts) => new Promise((resolve, reject) => {
-    opts.signal.addEventListener('abort', () => reject(opts.signal.reason));
+    const keepAlive = setTimeout(() => reject(new Error('keep-alive expired — abort never fired')), 10_000);
+    opts.signal.addEventListener('abort', () => {
+      clearTimeout(keepAlive);
+      reject(opts.signal.reason);
+    });
   }));
   const t0 = Date.now();
   await assert.rejects(embedOne('hello'), (err) => {
