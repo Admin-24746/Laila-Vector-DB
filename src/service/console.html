@@ -14,6 +14,7 @@
   header h1 { font-size:16px; margin:0; }
   header .sub { color:var(--dim); font-size:12px; }
   #health { margin-inline-start:auto; font-size:12px; color:var(--dim); }
+  #token { width:170px; font-size:12px; padding:4px 8px; }
   main { display:grid; grid-template-columns: 380px 1fr; gap:16px; padding:16px 20px; max-width:1280px; margin:0 auto; }
   @media (max-width:900px){ main { grid-template-columns:1fr; } }
   .panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px; }
@@ -54,6 +55,8 @@
   <h1>Laila Knowledge Base — Sandbox</h1>
   <span class="sub">try it before it's live (docs/20 §4)</span>
   <span id="health">checking health…</span>
+  <input id="token" type="password" placeholder="service token" autocomplete="off"
+         title="SERVICE_TOKEN from .env — required when auth is on (docs/10); stored in this browser only">
 </header>
 <main>
   <div class="panel">
@@ -104,6 +107,11 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
+// /v1/* auth (docs/10): paste the SERVICE_TOKEN once; kept in localStorage on this machine.
+$('token').value = localStorage.getItem('laila_service_token') ?? '';
+$('token').addEventListener('change', () => localStorage.setItem('laila_service_token', $('token').value.trim()));
+const authHeaders = () => $('token').value.trim() ? { authorization: 'Bearer ' + $('token').value.trim() } : {};
+
 fetch('/healthz').then(r => r.json()).then(h => {
   $('health').innerHTML =
     `qdrant ${h.qdrant ? '✅' : '❌'} · tei ${h.tei ? '✅' : '❌'} · llm ${h.llm ? '✅' : '⚪ off'} · ${h.points ?? '?'} chunks`;
@@ -125,9 +133,10 @@ async function run(kind) {
   if ($('sc').value.trim()) body.filters.service_class = $('sc').value.trim();
   try {
     const res = await fetch('/v1/' + kind, {
-      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+      method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body),
     });
     const data = await res.json();
+    if (res.status === 401) { out.innerHTML = '<div class="err">401 unauthorized — paste the SERVICE_TOKEN (from .env) into the token box above.</div>'; return; }
     if (!res.ok || data.error) { out.innerHTML = `<div class="err">${esc(data.error)}\n${esc(data.detail ?? '')}</div>`; return; }
     out.innerHTML = render[kind](data);
   } catch (e) { out.innerHTML = `<div class="err">${esc(e.message)}</div>`; }

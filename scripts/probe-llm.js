@@ -3,6 +3,7 @@
 // the OpenAI-compat endpoint and the native /api/chat. Run with the service up (:8090).
 
 import { ANSWER_SYSTEM, languageName } from '../src/service/prompts.js';
+import { CONFIG } from '../src/lib/config.js';
 
 const OLLAMA = 'http://localhost:11434';
 const MODEL = process.env.LLM_MODEL || 'qwen3:4b';
@@ -11,7 +12,10 @@ const QUESTION = 'how much is the combo bundle and what do I get?';
 async function realSystemPrompt() {
   const res = await fetch('http://127.0.0.1:8090/v1/retrieve', {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(CONFIG.serviceToken ? { authorization: `Bearer ${CONFIG.serviceToken}` } : {}),
+    },
     body: JSON.stringify({ text: QUESTION, language: 'en' }),
   });
   const { chunks, grounded_facts } = await res.json();

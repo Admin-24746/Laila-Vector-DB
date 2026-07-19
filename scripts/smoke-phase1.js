@@ -1,9 +1,12 @@
 // Phase 1 smoke test — exercises every endpoint the way Druid would (UTF-8 clean).
+import { CONFIG } from '../src/lib/config.js';
+
 const BASE = 'http://127.0.0.1:8090';
+const AUTH = CONFIG.serviceToken ? { authorization: `Bearer ${CONFIG.serviceToken}` } : {};
 
 async function post(path, body) {
   const res = await fetch(BASE + path, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body),
+    method: 'POST', headers: { 'content-type': 'application/json', ...AUTH }, body: JSON.stringify(body),
   });
   return { status: res.status, data: await res.json() };
 }
