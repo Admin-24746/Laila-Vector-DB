@@ -1,0 +1,31 @@
+// SAMPLE gold set over the sample entities (doc 09 §3). Grow to ~150–300 REAL items — phrasings from Laila logs — before trusting any number. One JSON object per line.
+{"query":"extra fee if I get Combo three times this month?","language":"en","expected_entity":"bundle_1601","expected_flow":"knowledge_flow"}
+{"query":"do I pay extra if I subscribe to Elna w lil Kul 3 times in one month?","language":"en","expected_chunk":"bundle_1750::fees_edgecases::en"}
+{"query":"how do I cancel the combo bundle","language":"en","expected_chunk":"bundle_1601::unsubscribe::en"}
+{"query":"how do I unsubscribe from combo","language":"en","expected_entity":"bundle_1601"}
+{"query":"what is the combo bundle","language":"en","expected_chunk":"bundle_1601::overview::en"}
+{"query":"combo bundle price","language":"en","expected_entity":"bundle_1601"}
+{"query":"شلون الغي اشتراك باقة كومبو","language":"ar","expected_chunk":"bundle_1601::unsubscribe::ar"}
+{"query":"شنو باقة كومبو","language":"ar","expected_entity":"bundle_1601"}
+{"query":"اكو رسوم اضافية اذا اشتركت بالنا وللكل 3 مرات","language":"ar","expected_chunk":"bundle_1750::fees_edgecases::ar"}
+{"query":"پاکێجی کۆمبۆ چییە","language":"ckb","expected_chunk":"bundle_1601::overview::ckb"}
+{"query":"چۆن بەشداری پاکێجی کۆمبۆ بکەم","language":"ckb","expected_chunk":"bundle_1601::subscribe::ckb"}
+{"query":"pakêja combo çi ye","language":"kmr","expected_entity":"bundle_1601"}
+{"query":"çawa abonebûna combo betal bikim","language":"kmr","expected_chunk":"bundle_1601::unsubscribe::kmr"}
+{"query":"what does service class mean","language":"en","expected_entity":"terminology_line"}
+{"query":"شنو يعني فئة الخدمة","language":"ar","expected_entity":"terminology_line"}
+{"query":"I need a loan","language":"en","expected_flow":"loan_flow"}
+{"query":"can you advance me some credit","language":"en","expected_flow":"loan_flow"}
+{"query":"احتاج قرض","language":"ar","expected_flow":"loan_flow"}
+{"query":"سلفوني رصيد","language":"ar","expected_flow":"loan_flow"}
+{"query":"پێویستم بە قەرزە","language":"ckb","expected_flow":"loan_flow"}
+{"query":"ez deynê dixwazim","language":"kmr","expected_flow":"loan_flow"}
+{"query":"what's my balance","language":"en","expected_flow":"balance_flow"}
+{"query":"شكد رصيدي","language":"ar","expected_flow":"balance_flow"}
+{"query":"باڵانسم چەندە","language":"ckb","expected_flow":"balance_flow"}
+{"query":"شلون اشحن رصيد","language":"ar","expected_flow":"recharge_flow"}
+{"query":"how do I recharge","language":"en","expected_flow":"recharge_flow"}
+{"query":"وصلني بموظف","language":"ar","expected_flow":"agent_handoff"}
+{"query":"I want to talk to a human","language":"en","expected_flow":"agent_handoff"}
+{"query":"tell me about the combo bundle","language":"en","expected_flow":"knowledge_flow"}
+{"query":"شنو الباقات الموجودة","language":"ar","expected_flow":"knowledge_flow"}

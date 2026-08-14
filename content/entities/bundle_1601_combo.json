@@ -1,0 +1,53 @@
+{
+  "_note": "SAMPLE — the docs' worked example (docs 02 §3, 03 §5). Fictional data. Replace with the real seed-20 (doc 07 §9). ar/ckb/kmr text needs native review (doc 21).",
+  "entity_id": "bundle_1601",
+  "type": "bundle",
+  "subtype": "btl",
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-13T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "names": {
+    "en": "Combo Bundle",
+    "ar": "باقة كومبو",
+    "ckb": "پاکێجی کۆمبۆ",
+    "kmr": "Pakêja Combo",
+    "aliases": ["combo", "كومبو", "کۆمبۆ", "combo monthly"]
+  },
+  "description": {
+    "en": "4 weeks: 500 on-net minutes, 25 on-net SMS, 25 off-net minutes and SMS, and 300MB data for 5,000 IQD.",
+    "ar": "4 اسابيع: 500 دقيقة داخل الشبكة، 25 رسالة داخل الشبكة، 25 دقيقة ورسالة خارج الشبكة، و300 ميغابايت انترنت بـ5000 دينار.",
+    "ckb": "4 هەفتە: 500 خولەک ناو تۆڕ، 25 نامە ناو تۆڕ، 25 خولەک و نامە بۆ دەرەوەی تۆڕ، و300 مێگابایت داتا بە 5000 دینار.",
+    "kmr": "4 hefte: 500 deqîqe di nav torê de, 25 SMS di nav torê de, 25 deqîqe û SMS derveyî torê, û 300MB data bi 5000 dînar."
+  },
+  "how_to": {
+    "subscribe": {
+      "en": "Subscribe: dial *123*1# or send COMBO to 1234.",
+      "ar": "للاشتراك: اطلب *123*1# او ارسل COMBO الى 1234.",
+      "ckb": "بۆ بەشداریکردن: ژمارە *123*1# لێبدە یان COMBO بنێرە بۆ 1234.",
+      "kmr": "Ji bo abonebûnê: *123*1# bigire an COMBO bişîne 1234."
+    },
+    "unsubscribe": {
+      "en": "Unsubscribe: send STOP COMBO to 1234, or dial *123*0#. No cancellation fee.",
+      "ar": "لالغاء الاشتراك: ارسل STOP COMBO الى 1234 او اطلب *123*0#. بدون رسوم الغاء.",
+      "ckb": "بۆ هەڵوەشاندنەوە: STOP COMBO بنێرە بۆ 1234 یان *123*0# لێبدە. بەبێ کرێی هەڵوەشاندنەوە.",
+      "kmr": "Ji bo betalkirinê: STOP COMBO bişîne 1234 an *123*0# bigire. Bê xerca betalkirinê."
+    }
+  },
+  "conditions": {
+    "eligible_locations": ["baghdad"],
+    "eligible_service_classes": ["red"]
+  },
+  "facts": {
+    "price_iqd": 5000,
+    "validity_days": 28,
+    "data_mb": 300,
+    "minutes_onnet": 500,
+    "sms_onnet": 25,
+    "minutes_offnet": 25,
+    "sms_offnet": 25,
+    "bundleId": 1601
+  },
+  "conflicts_with": ["bundle_1750"]
+}

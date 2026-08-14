@@ -1,0 +1,24 @@
+{
+  "_doc": "Controlled vocabularies (doc 26). Taxonomy is DATA, not code (doc 02 §2). Validation (src/schema.js) rejects values outside these lists.",
+  "entity_type": ["bundle", "service", "roaming", "intent", "error", "image_ref", "terminology"],
+  "language": ["en", "ar", "ckb", "kmr"],
+  "bundle_subtype": ["atl", "btl", "corporate"],
+  "roaming_subtype": ["pack", "rates"],
+  "service_class": {
+    "_todo": "PLACEHOLDER — doc 26 open item: full real list + which classes buy what",
+    "values": ["red", "yooz"]
+  },
+  "location": [
+    "baghdad", "basra", "sulaymaniyah", "erbil", "duhok", "kirkuk", "najaf",
+    "karbala", "anbar", "diyala", "wasit", "maysan", "dhi_qar", "muthanna",
+    "babil", "qadisiyyah", "saladin", "nineveh", "halabja"
+  ],
+  "provider": ["asiacell", "zain", "korek", "other"],
+  "status": ["draft", "needs_review", "verified", "retired"],
+  "error_severity": ["info", "warning", "blocking", "sensitive"],
+  "section": [
+    "overview", "subscribe", "unsubscribe", "activate", "deactivate",
+    "eligibility", "fees_edgecases", "conflicts", "coverage", "rates",
+    "troubleshooting", "definition", "explanation", "resolution", "match"
+  ]
+}

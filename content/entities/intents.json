@@ -1,0 +1,93 @@
+[
+  {
+    "_note": "SAMPLE intents from the doc-14 catalogue (flow names UNCONFIRMED — doc 14 §6). Example utterances drafted per doc 02 §2b; need native review + real customer phrasings from Laila logs (doc 09 §3).",
+    "entity_id": "intent_loan",
+    "type": "intent",
+    "subtype": "loan",
+    "target_flow": "loan_flow",
+    "status": "draft",
+    "source": "manual",
+    "version": 1,
+    "updated_at": "2026-07-13T00:00:00Z",
+    "languages_present": ["en", "ar", "ckb", "kmr"],
+    "names": { "en": "Loan / advance balance", "ar": "قرض / سلفة رصيد", "ckb": "قەرز / پێشکەشی باڵانس", "kmr": "Deyn / balansa pêşwext" },
+    "examples": {
+      "en": ["I need a loan", "can you advance me some credit", "lend me balance until I recharge", "I want loan bundles"],
+      "ar": ["احتاج قرض", "سلفوني رصيد", "اريد سلفة", "ممكن قرض رصيد"],
+      "ckb": ["پێویستم بە قەرزە", "قەرزێکم بدەنێ", "دەتوانم باڵانس بە قەرز وەربگرم"],
+      "kmr": ["ez deynê dixwazim", "hûn dikarin balansê bi deyn bidin min", "min deyn bide"]
+    }
+  },
+  {
+    "entity_id": "intent_balance_inquiry",
+    "type": "intent",
+    "subtype": "balance",
+    "target_flow": "balance_flow",
+    "status": "draft",
+    "source": "manual",
+    "version": 1,
+    "updated_at": "2026-07-13T00:00:00Z",
+    "languages_present": ["en", "ar", "ckb", "kmr"],
+    "names": { "en": "Balance inquiry", "ar": "استعلام الرصيد", "ckb": "پرسیاری باڵانس", "kmr": "Pirsa balansê" },
+    "examples": {
+      "en": ["what's my balance", "check my balance", "how much credit do I have left"],
+      "ar": ["شكد رصيدي", "افحص رصيدي", "شكد باقي عندي رصيد"],
+      "ckb": ["باڵانسم چەندە", "چەند پارەم ماوە", "باڵانسەکەم بپشکنە"],
+      "kmr": ["balansa min çi ye", "çiqas balansa min maye"]
+    }
+  },
+  {
+    "entity_id": "intent_recharge",
+    "type": "intent",
+    "subtype": "recharge",
+    "target_flow": "recharge_flow",
+    "status": "draft",
+    "source": "manual",
+    "version": 1,
+    "updated_at": "2026-07-13T00:00:00Z",
+    "languages_present": ["en", "ar", "ckb", "kmr"],
+    "names": { "en": "Recharge", "ar": "شحن الرصيد", "ckb": "پڕکردنەوەی باڵانس", "kmr": "Dagirtina balansê" },
+    "examples": {
+      "en": ["how do I recharge", "I want to top up my line", "recharge my balance with a scratch card"],
+      "ar": ["شلون اشحن رصيد", "اريد اشحن خطي", "اشحن رصيد بكارت"],
+      "ckb": ["چۆن باڵانس پڕبکەمەوە", "دەمەوێت هێڵەکەم پڕبکەمەوە"],
+      "kmr": ["ez çawa balansê dagirim", "ez dixwazim xeta xwe dagirim"]
+    }
+  },
+  {
+    "entity_id": "intent_knowledge_query",
+    "type": "intent",
+    "subtype": "knowledge",
+    "target_flow": "knowledge_flow",
+    "status": "draft",
+    "source": "manual",
+    "version": 1,
+    "updated_at": "2026-07-13T00:00:00Z",
+    "languages_present": ["en", "ar", "ckb", "kmr"],
+    "names": { "en": "Bundle/service question", "ar": "سؤال عن باقة او خدمة", "ckb": "پرسیار دەربارەی پاکێج یان خزمەت", "kmr": "Pirs li ser pakêj an xizmetê" },
+    "examples": {
+      "en": ["tell me about the combo bundle", "what bundles do you have", "how much is the monthly internet bundle", "what are the rules of this bundle"],
+      "ar": ["شنو باقة كومبو", "شنو الباقات الموجودة", "بيش باقة الانترنت الشهرية", "شنو شروط هاي الباقة"],
+      "ckb": ["پاکێجی کۆمبۆ چییە", "چ پاکێجێکتان هەیە", "پاکێجی ئینتەرنێتی مانگانە بە چەندە"],
+      "kmr": ["pakêja combo çi ye", "kîjan pakêj hene", "pakêja înternetê ya mehane bi çiqas e"]
+    }
+  },
+  {
+    "entity_id": "intent_human_handoff",
+    "type": "intent",
+    "subtype": "handoff",
+    "target_flow": "agent_handoff",
+    "status": "draft",
+    "source": "manual",
+    "version": 1,
+    "updated_at": "2026-07-13T00:00:00Z",
+    "languages_present": ["en", "ar", "ckb", "kmr"],
+    "names": { "en": "Talk to a human", "ar": "التحدث مع موظف", "ckb": "قسەکردن لەگەڵ کارمەند", "kmr": "Bi karmendekî re biaxive" },
+    "examples": {
+      "en": ["I want to talk to a human", "connect me to an agent", "customer service please"],
+      "ar": ["اريد احجي ويا موظف", "وصلني بموظف", "خدمة الزبائن رجاء"],
+      "ckb": ["دەمەوێت لەگەڵ کارمەندێک قسە بکەم", "پەیوەندیم بکە بە کارمەندێک"],
+      "kmr": ["ez dixwazim bi mirovekî re biaxivim", "min bi karmendekî ve girê bide"]
+    }
+  }
+]

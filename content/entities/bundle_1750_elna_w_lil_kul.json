@@ -1,0 +1,55 @@
+{
+  "_note": "SAMPLE — the repeat-purchase-fee example from doc 00 §1. Fictional numbers except the documented 2,500 IQD / 3× rule. Replace with real seed-20 data.",
+  "entity_id": "bundle_1750",
+  "type": "bundle",
+  "subtype": "atl",
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-13T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "names": {
+    "en": "Elna w lil Kul",
+    "ar": "النا وللكل",
+    "ckb": "ئێمە و بۆ هەموو",
+    "kmr": "Elna w lil Kul",
+    "aliases": ["elna", "النا", "elna w lil kul", "elna wlil kul"]
+  },
+  "description": {
+    "en": "Monthly bundle: 1GB data and 200 all-net minutes for 10,000 IQD, valid 30 days.",
+    "ar": "باقة شهرية: 1 كيكابايت انترنت و200 دقيقة لكل الشبكات بـ10000 دينار، صالحة 30 يوم.",
+    "ckb": "پاکێجی مانگانە: 1 گێگابایت داتا و200 خولەک بۆ هەموو تۆڕەکان بە 10000 دینار، بۆ 30 ڕۆژ.",
+    "kmr": "Pakêja mehane: 1GB data û 200 deqîqe ji bo hemû toran bi 10000 dînar, 30 roj derbasdar e."
+  },
+  "how_to": {
+    "subscribe": {
+      "en": "Subscribe: dial *555# and choose Elna w lil Kul.",
+      "ar": "للاشتراك: اطلب *555# واختر النا وللكل.",
+      "ckb": "بۆ بەشداریکردن: *555# لێبدە و ئێمە و بۆ هەموو هەڵبژێرە.",
+      "kmr": "Ji bo abonebûnê: *555# bigire û Elna w lil Kul hilbijêre."
+    },
+    "unsubscribe": {
+      "en": "Unsubscribe: send STOP ELNA to 1234.",
+      "ar": "لالغاء الاشتراك: ارسل STOP ELNA الى 1234.",
+      "ckb": "بۆ هەڵوەشاندنەوە: STOP ELNA بنێرە بۆ 1234.",
+      "kmr": "Ji bo betalkirinê: STOP ELNA bişîne 1234."
+    }
+  },
+  "fees_prose": {
+    "en": "Subscribing 3 times in one month adds an extra fee of 2,500 IQD on the third subscription.",
+    "ar": "الاشتراك 3 مرات بشهر واحد يضيف رسوم اضافية 2500 دينار على الاشتراك الثالث.",
+    "ckb": "بەشداریکردن 3 جار لە یەک مانگدا کرێیەکی زیادەی 2500 دینار لەسەر بەشداری سێیەم زیاد دەکات.",
+    "kmr": "Abonebûna 3 caran di mehekê de xercek zêde ya 2500 dînar li abonetiya sêyem zêde dike."
+  },
+  "conditions": {
+    "repeat_purchase_fee_iqd": 2500,
+    "repeat_purchase_threshold": 3
+  },
+  "facts": {
+    "price_iqd": 10000,
+    "validity_days": 30,
+    "data_mb": 1024,
+    "minutes_onnet": 200,
+    "bundleId": 1750
+  }
+}

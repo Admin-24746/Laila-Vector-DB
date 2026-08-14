@@ -1,0 +1,23 @@
+{
+  "_note": "SAMPLE terminology entity — the docs' own synonym example (doc 00 §5, FR9). Seeds entity resolution across 'line' = 'primary offer' = 'service class'.",
+  "entity_id": "terminology_line",
+  "type": "terminology",
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-07-13T00:00:00Z",
+  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "names": {
+    "en": "Line (primary offer / service class)",
+    "ar": "الخط (العرض الاساسي / فئة الخدمة)",
+    "ckb": "هێڵ (ئۆفەری سەرەکی / پۆلی خزمەت)",
+    "kmr": "Xet (pêşniyara bingehîn / celebê xizmetê)",
+    "aliases": ["line", "primary offer", "service class", "خط", "هێڵ", "xet"]
+  },
+  "definition": {
+    "en": "Line, primary offer, and service class all mean the same thing: the subscription plan type that decides which bundles a customer can buy. For example, a Red line cannot buy Yooz bundles.",
+    "ar": "الخط والعرض الاساسي وفئة الخدمة كلها نفس المعنى: نوع خط الاشتراك الذي يحدد اي باقات يكدر الزبون يشتريها. مثلا خط رد ما يكدر يشتري باقات يوز.",
+    "ckb": "هێڵ و ئۆفەری سەرەکی و پۆلی خزمەت هەمووی یەک واتایە: جۆری هێڵی بەشداری کە دیاری دەکات کڕیار کام پاکێج دەتوانێت بکڕێت. بۆ نموونە هێڵی ڕێد ناتوانێت پاکێجی یوز بکڕێت.",
+    "kmr": "Xet, pêşniyara bingehîn û celebê xizmetê hemû heman wateyê ne: cureyê xeta aboneyê ku diyar dike kirrîner dikare kîjan pakêjan bikire. Mînak, xeteke Red nikare pakêjên Yooz bikire."
+  }
+}
