@@ -8,8 +8,10 @@ const envFile = path.join(ROOT_DIR, '.env');
 if (existsSync(envFile)) {
   try {
     process.loadEnvFile(envFile);
-  } catch {
-    // Node < 21.7 — fall back to process env / defaults
+  } catch (err) {
+    // Was a silent catch. A missing API (Node < 20.12) or a malformed line means SERVICE_TOKEN
+    // never loads, which turns auth OFF — far too quiet a failure to swallow (audit 2026-08-21).
+    console.warn(`WARNING: could not load ${envFile} (${err?.message ?? err}) — using process env / defaults.`);
   }
 }
 
@@ -25,6 +27,14 @@ export const CONFIG = {
   // embed ceiling (see lib/embedder.js).
   embedTimeoutMs: Number(process.env.EMBED_TIMEOUT_MS ?? 10_000),
   qdrantTimeoutMs: Number(process.env.QDRANT_TIMEOUT_MS ?? 10_000),
+  // Content gate (docs/20, docs/25 §2 `status`). Every shipped seed entity is status:"draft"
+  // with invented shortcodes and prices (`attributes.review_note`), and the query filter used
+  // to exclude only "retired" — so placeholder facts were answerable. Draft stays visible in
+  // the sandbox (that is what the sandbox is for) and is excluded in production. Force either
+  // way with EXCLUDE_DRAFT=1|0.
+  excludeDraft: process.env.EXCLUDE_DRAFT != null
+    ? process.env.EXCLUDE_DRAFT === '1'
+    : process.env.NODE_ENV === 'production',
   // Routing thresholds (docs/06 §5, D7) — cosine scale; calibrated via `npm run eval:sweep`.
   route: {
     tauHigh: Number(process.env.ROUTE_TAU_HIGH ?? 0.8),

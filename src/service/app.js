@@ -25,6 +25,23 @@ import { INJECTION_DEFLECTION } from './prompts.js';
 
 const LOG_DIR = path.join(ROOT_DIR, 'logs');
 
+// The path Fastify actually dispatched, independent of how the client wrote the request
+// target. Prefer the matched route pattern; fall back to parsing the raw target (which
+// discards an absolute-form origin and any query string). Never trust req.url directly.
+// `history` arrives from an external caller (docs/08) — a non-array must not turn a
+// malformed request into a 500 from inside .find().
+const toTurns = (h) => (Array.isArray(h) ? h : []);
+
+export function routedPath(req) {
+  const routed = req.routeOptions?.url;
+  if (typeof routed === 'string' && routed) return routed;
+  try {
+    return new URL(req.url, 'http://localhost').pathname;
+  } catch {
+    return String(req.url ?? '');
+  }
+}
+
 // Observability per docs/08 §5 — one JSON line per call; feeds the gap report (docs/13)
 async function auditToFile(record, file = 'service.jsonl') {
   const line = JSON.stringify({ ts: new Date().toISOString(), ...record });
@@ -70,8 +87,15 @@ export function buildApp(overrides = {}) {
     return { error: 'internal_error', detail: err.message };
   });
 
+  // Gate on the ROUTED path, never on `req.url`. RFC 9112 §3.2.2 requires servers to accept
+  // an absolute-form request target ("POST http://host/v1/retrieve HTTP/1.1"), and Node then
+  // reports the whole URI as req.url — so `req.url.startsWith('/v1/')` is false while the
+  // router still dispatches the handler. That was a complete auth bypass (verified 2026-08-21
+  // over a raw socket: 200 OK with no token; pinned in test/auth.test.js). `app.inject()`
+  // normalizes the target and cannot reproduce it — the regression test uses a real socket.
   app.addHook('onRequest', async (req, reply) => {
-    if (!deps.serviceToken || !req.url.startsWith('/v1/')) return;
+    if (!deps.serviceToken) return;
+    if (!routedPath(req).startsWith('/v1/')) return;
     if (req.headers.authorization !== `Bearer ${deps.serviceToken}`) {
       reply.code(401).send({ error: 'unauthorized' });
     }
@@ -159,9 +183,14 @@ export function buildApp(overrides = {}) {
     // reaches the rewrite LLM and no model output can be echoed back (2026-07-19
     // review). History turns are scanned too: an injection can hide in prior context
     // (docs/17 §2.3). Same response shape as a normal answer (docs/08 §2).
+    // Scan BOTH history field names. understand.js builds the rewrite prompt from
+    // `t.text ?? t.content`, so scanning only `.text` let an OpenAI-style caller smuggle an
+    // injection through `.content` — the exact path the 2026-07-19 ordering fix was meant to
+    // close (verified 2026-08-21; pinned in test/safety.test.js).
+    const turnText = (h) => h?.text ?? h?.content;
     const injectedTurn = deps.detectInjection(text)
       ? 'text'
-      : history.find((h) => deps.detectInjection(h?.text)) ? 'history' : null;
+      : toTurns(history).find((h) => deps.detectInjection(turnText(h))) ? 'history' : null;
     if (injectedTurn) {
       const lang = LANG_CODES.includes(language) ? language : detectLanguage(text);
       const response = {

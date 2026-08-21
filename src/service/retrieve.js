@@ -17,7 +17,7 @@ const matchOrEmpty = (key, value) => ({
   ],
 });
 
-function buildFilter({ types, language, filters = {} }) {
+export function buildFilter({ types, language, filters = {} }) {
   const must = [
     { key: 'type', match: { any: types } },
   ];
@@ -30,7 +30,10 @@ function buildFilter({ types, language, filters = {} }) {
   must.push({ should: [{ key: 'valid_from', range: { lte: now } }, { is_empty: { key: 'valid_from' } }] });
   must.push({ should: [{ key: 'valid_to', range: { gte: now } }, { is_empty: { key: 'valid_to' } }] });
 
-  return { must, must_not: [{ key: 'status', match: { value: 'retired' } }] };
+  // Retired content is never answerable; draft content is answerable only in the sandbox
+  // (CONFIG.excludeDraft — see lib/config.js). docs/25 §2 status values.
+  const blockedStatuses = CONFIG.excludeDraft ? ['retired', 'draft'] : ['retired'];
+  return { must, must_not: [{ key: 'status', match: { any: blockedStatuses } }] };
 }
 
 /**

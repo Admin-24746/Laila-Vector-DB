@@ -5,6 +5,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CONFIG, ROOT_DIR } from '../lib/config.js';
 import { loadVocab } from '../lib/vocab.js';
 import { validateEntities } from '../lib/validate.js';
@@ -54,12 +55,34 @@ const contentHash = (e) => {
 
 const loadState = () => (existsSync(STATE_FILE) ? JSON.parse(readFileSync(STATE_FILE, 'utf8')) : {});
 
+/**
+ * Entities to retire: previously ingested (present in state) but no longer ON DISK.
+ * Keyed off every entity read from the seed dir, NOT off the ones that passed validation —
+ * see the note at the call site.
+ * @param {Record<string,string>} state @param {{entity_id:string}[]} entities
+ */
+export function retiredIds(state, entities) {
+  const sourceIds = new Set(entities.map((e) => e.entity_id));
+  return Object.keys(state).filter((id) => !sourceIds.has(id));
+}
+
 async function main() {
   const t0 = Date.now();
   console.log(`Ingesting from ${SEED_DIR}${REBUILD ? ' (REBUILD)' : ''}${DRY_RUN ? ' (DRY RUN)' : ''}\n`);
 
   const vocab = loadVocab();
   const entities = loadSeedEntities();
+
+  // Guard the catastrophic case: an empty or unreadable seed dir would otherwise mark every
+  // previously-ingested entity as "removed" and delete the entire live collection, exit 0.
+  if (!entities.length && Object.keys(loadState()).length) {
+    throw new Error(
+      `No entities found in ${SEED_DIR}, but .ingest-state.json lists `
+      + `${Object.keys(loadState()).length}. Refusing to retire the whole collection — `
+      + 'check the seed directory, or delete .ingest-state.json if this is intentional.',
+    );
+  }
+
   const { valid, rejected, warnings } = validateEntities(entities, vocab);
 
   for (const r of rejected) {
@@ -76,8 +99,11 @@ async function main() {
   const state = REBUILD ? {} : loadState();
   const changed = valid.filter((e) => state[e.entity_id] !== contentHash(e));
   const unchanged = valid.length - changed.length;
-  const sourceIds = new Set(valid.map((e) => e.entity_id));
-  const removed = Object.keys(state).filter((id) => !sourceIds.has(id));
+  // Retirement must key off what is ON DISK, not what passed validation. Building this from
+  // `valid` meant a REJECTED entity looked "removed" and had all its live points deleted —
+  // the exact opposite of the message printed above ("previous versions … remain live"), and
+  // an empty/unreadable seed dir silently wiped the whole collection (audit 2026-08-21).
+  const removed = retiredIds(state, entities);
 
   // Chunk
   const nameOf = (() => {
@@ -142,7 +168,14 @@ async function main() {
   console.log(`\nDone in ${((Date.now() - t0) / 1000).toFixed(1)}s — upserted ${points.length} chunks for ${changed.length} entities; collection now holds ${await countPoints()} points.`);
 }
 
-main().catch((err) => {
-  console.error(`\nIngestion failed: ${err.message}`);
-  process.exit(1);
-});
+// Only ingest when this file is the entry point — importing it (e.g. from test/ingest.test.js
+// to reach retiredIds) must never kick off a real run against the live collection.
+const invokedDirectly = process.argv[1]
+  && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(`\nIngestion failed: ${err.message}`);
+    process.exit(1);
+  });
+}
