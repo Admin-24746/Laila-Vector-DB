@@ -1,5 +1,35 @@
 # Handover — Laila Knowledge Base (Vector DB)
 
+> # ⛔ SUPERSEDED — DO NOT FOLLOW THE RUNBOOK IN THIS FILE
+>
+> **Read [`README.md`](README.md) instead.** This document describes the *original*
+> implementation (`src/*.js`, port 7100, `content/entities/`, `EMBEDDER=mock`). That tree was
+> replaced by `src/lib/` + `src/service/` + `data/seed/`, and commit `bd84b2e` (2026-08-14)
+> merged the old one back into the repo alongside the new one. **Both are on disk. Only the
+> new one is wired to `package.json`.**
+>
+> Running the commands below against the current stack **corrupts the live index** — verified
+> 2026-08-21:
+>
+> - Both trees default to the **same Qdrant collection** (`laila_knowledge`).
+> - The two sparse analyzers hash the same Arabic token to **different indices** (FNV-1a over
+>   UTF-8 bytes vs UTF-16 code units) — **0 of 5 dimensions overlap**, so lexical retrieval for
+>   Arabic and Kurdish silently dies.
+> - The two point-ID functions disagree, so chunks **duplicate** instead of overwriting.
+> - The legacy chunker writes `payload.chunk_key`; the live service reads `payload.chunk_id`.
+> - `§5` and `§8` tell you to ingest with `EMBEDDER=mock`, writing plumbing-only vectors into
+>   the collection customers are served from. Three entity IDs overlap between the two data
+>   sets (`bundle_1601`, `intent_loan`, `terminology_line`), and legacy ingest deletes by
+>   `entity_id` first.
+>
+> Also stale here: `qdrant_bin/` and `qdrant_storage/` are described in §7 as "gitignored
+> already" — they are **committed** (see README). Paths under
+> `$env:USERPROFILE\Desktop\DevOps\Vector DB` are from the previous machine; the project now
+> lives at `D:\Projects\DevOps\Vector DB`.
+>
+> Kept for history: the design-decision record (§4) and the open-issues list (§6) are still
+> useful reading. The commands are not.
+
 Last updated: 2026-07-13 (evening — after the Docker/WSL2 install)
 Scope: everything under `Vector DB/` — 30 design docs + the alpha implementation.
 Rule inherited from this repo's scraper incident log: **nothing in this file is called

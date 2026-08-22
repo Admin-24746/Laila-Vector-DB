@@ -47,15 +47,84 @@ test/            unit suite (docs/23): chunker, normalizer, follow-up gate, guar
 logs/            service audit log JSONL (gitignored)
 ```
 
-## Where we left off (updated 2026-07-19, second session)
+## Where we left off (updated 2026-08-22)
 
-**Phase 0 + Phase 1 done, verified, COMMITTED and pushed. All four engineering-backlog
-items are in** (prompt hardening, injection filter, service auth, Arabic rewrite fix) —
-landed as three topical commits after `5d9e30c`, plus this README. The safety-filter
-precision bugs found by the 2026-07-19 adversarial review are **fixed, regression-pinned
-and live-verified**. `npm test` = **77 offline tests**, all green; `npm run redteam` =
-15/15 safe. **The engineering backlog is now empty — what remains is the content work
-(`content-kit/`).**
+**Phase 0 + Phase 1 are done and committed. A full security + correctness audit ran on
+2026-08-21 against the new laptop, and its blocking findings are FIXED** (`ab98c99`, branch
+`fix/audit-blocking-issues`, **not pushed**). `npm test` = **127 tests, 126 pass / 1 skipped /
+0 fail**; `npm audit` = **0 vulnerabilities**. The engineering backlog is no longer empty —
+see the audit section below. The content work (`content-kit/`) is still the real unblock.
+
+> ⚠️ **`HANDOVER.md` and `docs/29` describe a DIFFERENT, DEAD implementation** (`src/*.js`,
+> port 7100, `content/entities/`). Commit `bd84b2e` merged that older tree back into this
+> repo. Both trees default to the same Qdrant collection and their sparse analyzers are
+> mutually unintelligible for Arabic/Kurdish — **following the HANDOVER runbook corrupts the
+> live index.** This README is the authoritative document. Details in the audit section.
+
+### 2026-08-21/22 — security & correctness audit, and the fixes
+
+Full report (reproductions for every claim):
+<https://claude.ai/code/artifact/8000da68-0b45-45a4-9635-f0746f9ed08c>
+
+**Fixed in `ab98c99`** — six issues, each pinned by a regression test that fails without it
+(`test/auth.test.js`, `test/audit-fixes.test.js`):
+
+1. **Auth bypass (CRITICAL).** The `/v1/*` gate tested `req.url.startsWith('/v1/')`, but
+   RFC 9112 §3.2.2 requires accepting an absolute-form request target — which makes `req.url`
+   the whole URI, so the hook returned early while the router still ran the handler.
+   Reproduced over a raw socket: `POST http://evil.example/v1/retrieve` → **200 OK, no token**.
+   Now gates on the routed path. **`app.inject()` normalizes the target and cannot reproduce
+   this** — the regression test drives real sockets; 7 of its 11 cases fail against the old hook.
+2. **History injection bypass.** `understand.js` builds the rewrite prompt from
+   `t.text ?? t.content`, but the gate scanned only `.text` — so an OpenAI-style caller could
+   smuggle an injection to the rewrite LLM. Now scans both; a non-array `history` no longer 500s.
+3. **Ingest deletion.** `sourceIds` came from `valid`, so an entity that **failed validation**
+   looked "removed" and had its live points deleted — the opposite of the message printed two
+   lines earlier. Now keyed off what is on disk (`retiredIds()`), plus a guard that refuses to
+   retire the whole collection when the seed dir is empty.
+4. **Draft content.** All 12 seed entities are `status:"draft"` with invented shortcodes and
+   prices, and the query filter excluded only `retired`. Draft stays visible in the sandbox and
+   is hidden when `NODE_ENV=production`; override with `EXCLUDE_DRAFT`.
+5. **Dependencies.** `fast-uri` host confusion + `find-my-way` HTTP/2 DDoS (both high),
+   `undici` response desync (moderate). `npm audit` is now clean.
+6. **Fail-open auth.** An unset `SERVICE_TOKEN` disables the gate entirely, and the Dockerfile
+   copies neither `.env` nor the variable — so a container was open the moment someone set
+   `HOST=0.0.0.0` to make it reachable. Startup now refuses that combination, warns on
+   loopback, and the banner states `auth on|OFF` and whether draft content is visible.
+
+**Found and verified, NOT yet fixed** (second review pass, 2026-08-22):
+
+| # | Issue | Where | Why it matters |
+|---|-------|-------|----------------|
+| 1 | `Number('')` is `0`, and `??` doesn't catch `""` — a present-but-empty numeric line in `.env` silently zeroes the value | `src/lib/config.js:20-32` | An empty `ROUTE_TAU_HIGH=` makes the router **confidently route a garbage query** instead of abstaining. Also zeroes `TOP_K` (no results), `EMBED_TIMEOUT_MS` (every query 503s), `PORT` (random port). |
+| 2 | The `__clarify__` branch `continue`s before `falseRoutes++` | `src/eval/run.js:94` | A gold item that should have been clarified but was confidently routed is **excluded from the false-route rate** — the headline 0% is under-counted. |
+| 3 | `isLangMap` checks the container, never the values | `src/lib/validate.js:13` | `"names": {"en": {...}}` passes validation and embeds as `[object Object]`, served to the LLM as evidence. |
+| 4 | `contentHash` covers only the entity, but chunks bake in *related* entity names | `src/ingest/run.js:50` | Rename `bundle_b` and `bundle_a`'s conflict chunk keeps the old name — `bundle_a` is byte-identical, so it is never re-embedded. |
+| 5 | `anchorRatio` uses `hay.includes(t)` — substring, not token | `src/service/understand.js:98` | The hallucinated rewrite `"sub scribe to bun"` scores **1.00** against the conversation and passes the 0.6 guard. |
+| 6 | Unknown sections sort **first** (`indexOf` → `-1`) | `src/service/retrieve.js:126` | An unrecognised section leads the entity card handed to the LLM. |
+| 7 | The `_`-skip convention only applies to basenames | `src/ingest/run.js:30` | A `data/seed/_drafts/` folder is fully ingested. |
+| 8 | `repeat_purchase_threshold: 0` renders "from the 0th subscription" | `src/lib/chunker.js:147` | Customer-facing nonsense in an embedded fee chunk. |
+| 9 | Date pre-filter compares against UTC | `src/service/retrieve.js:29` | A promo `valid_to` expires 03:00 Baghdad, not midnight. |
+
+**Checked and cleared** (do not re-litigate): the Qdrant filter grammar is correct against real
+Qdrant 1.18.2 (`is_empty` does match missing keys; nested `should` inside `must` is a real OR);
+the safety regexes are **not** ReDoS-prone (worst case 3.8 ms on adversarial 1 MB input, because
+the `{0,40}` bounds keep backtracking linear); `decide()` cannot crash on an undefined rival
+(with no rival `gap = top.score >= tauHigh >= margin`, so it routes); and there is no
+`child_process`, `eval()`, `new Function` or dynamic `require` anywhere in the tree.
+
+**Still open by design decision, not neglect:**
+
+- **The number guardrail is a flat bag of digits** (`src/service/answer.js:20`) with no binding
+  between a number and its entity. It blocks *invented* numbers but allows a price **borrowed
+  from another bundle in the same top-5** — and returns it as `grounded: true`. Spelled-out
+  numbers ("five thousand", "سبعة آلاف") skip the check entirely. Rebinding it per entity
+  changes the grounding contract, so it needs a decision, not a patch.
+- **The legacy `src/*.js` tree.** Deleting it means first moving
+  `test/integration.qdrant.test.js` onto the current pipeline — that test imports the *dead*
+  modules and is the project's only integration coverage.
+
+### 2026-07-19 second session — safety-filter precision fixes (committed)
 
 ### 2026-07-19 second session — safety-filter precision fixes (committed)
 
@@ -132,21 +201,48 @@ Also in this session:
 
 ### ⏭ Next session — pick up here
 
-**The content work (the real unblock):** work through
-[`content-kit/`](content-kit/README.md) → re-ingest → re-eval →
-`npm run eval -- --sweep` → update `ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That's what
-pushes routing accuracy past the 0.85 gate (currently 28.6% at conservative defaults —
-data-limited by the synthetic seed, not the architecture).
+1. **Config coercion + the eval false-route metric** (audit items 1 and 2 above). Both are
+   small and mechanical, and each currently invalidates a stated safety guarantee.
+2. **Type-check langmap values** (item 3) plus the trivial text/ordering fixes (6–8). One pass.
+3. **The two design calls**: the per-entity number guardrail, and retiring the legacy tree.
+4. **Then the content work — still the real unblock:** work through
+   [`content-kit/`](content-kit/README.md) → re-ingest → re-eval → `npm run eval -- --sweep` →
+   update `ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That is what pushes routing accuracy past
+   the 0.85 gate (28.6% at conservative defaults — data-limited by the synthetic seed, not the
+   architecture: 29 of the 42 gold items are knowledge questions labelled `knowledge_flow`).
 
 **Open decisions for Yousif** (docs/23 §6): node:test vs Vitest; confirm GitHub Actions as CI
 runner (assumed); blocking vs advisory gates in alpha.
 
-Stack state: left **RUNNING** on 2026-07-19 (Qdrant+TEI containers, Ollama, service on :8090).
-Cold-start ritual if it's down: `docker compose up -d` → check Ollama `:11434` (not
-auto-started — `Start-Process -WindowStyle Hidden ollama -ArgumentList "serve"`) →
-`npm run serve` → sanity `npm test` (offline) + `node scripts/smoke-phase1.js` (full stack).
+#### Stack state — THIS MACHINE (HP EliteBook 830 G7, since 2026-08)
+
+The project was built on an Acer Predator with an **RTX 5060**. This laptop is
+**i5-10310U, 4c/8t, Intel UHD graphics — no CUDA**, 15.8 GB RAM, C: ~10 GB free / D: ~110 GB.
+Nothing is running; the stack has never been brought up here.
+
+- **Qdrant needs no Docker.** `qdrant_bin\qdrant.exe` (v1.18.2, official release) runs natively
+  and passes the full integration suite. Note it writes to `.\qdrant_storage\`, while
+  `docker-compose.yml` mounts a *named volume* — **they are different databases.**
+- **TEI must stay on CPU.** `docker-compose.yml` already defaults to `cpu-latest`; do **not**
+  uncomment the GPU block. Lower `--max-batch-tokens` to `4096` and `--max-client-batch-size`
+  to `16`, and add `mem_limit: 6g` (the `~/.wslconfig` comment already assumes limits exist).
+- **`npm run ingest` will write 0 chunks and exit 0.** `.ingest-state.json` came over from the
+  old machine and matches all 10 seed files, while this machine's collection is empty.
+  **Use `npm run ingest:rebuild` on first bring-up.**
+- **Ollama is not installed**, but `.env` still points at `localhost:11434`. `llmConfigured()`
+  only checks that the env strings are non-empty, so `/v1/answer` returns **HTTP 200 with the
+  safe-fallback answer for every question** instead of an honest 503. Blank `LLM_BASE_URL` and
+  `LLM_MODEL` until an LLM exists, or point them at a hosted OpenAI-compatible endpoint.
+- **Raise `EMBED_TIMEOUT_MS` to `30000`** — the 10 s default is a GPU-era number; BGE-M3 on this
+  CPU runs ~1–3 embeddings/second.
+- **Docker's disk image is still on C:.** Moving it needs the GUI: Docker Desktop → Settings →
+  Resources → Advanced → Disk image location → `D:\DockerData`. The `DataFolder` key is already
+  set in `settings-store.json` (Docker stores it but ignores it at startup).
+
 Testing gotchas: PowerShell mangles Arabic in HTTP bodies — always test via Node scripts;
-killing `npm run serve` via a task-stop orphans the node child — kill the :8090 PID instead.
+killing `npm run serve` via a task-stop orphans the node child — kill the :8090 PID instead;
+and **`app.inject()` cannot reproduce request-target attacks** — use a raw socket (see
+`test/auth.test.js`).
 
 **Known limitations (accepted for prototype, revisit with real data):**
 - The 3B model occasionally typos or mixes scripts in Arabic answers (`بُكْمَة` for `باقة`;
