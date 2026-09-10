@@ -12,6 +12,27 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 const isInt = (v) => Number.isInteger(v);
 const isLangMap = (v) => v && typeof v === 'object' && !Array.isArray(v);
 
+// The container check above says nothing about the values, so `"names": {"en": {...}}`
+// used to validate, embed as the string "[object Object]" and be served to the LLM as
+// evidence (audit 2026-08-22 item 3). Every language value that reaches the chunker must
+// be a non-empty string — or, for `examples`, an array of them.
+function langMapValueErrors(map, field, { array = false } = {}) {
+  const errors = [];
+  for (const [lang, value] of Object.entries(map ?? {})) {
+    const values = array ? (Array.isArray(value) ? value : [value]) : [value];
+    if (array && !Array.isArray(value)) {
+      errors.push(`${field}.${lang} must be an array of strings`);
+      continue;
+    }
+    for (const [i, v] of values.entries()) {
+      const at = array ? `${field}.${lang}[${i}]` : `${field}.${lang}`;
+      if (typeof v !== 'string') errors.push(`${at} must be a string, got ${v === null ? 'null' : Array.isArray(v) ? 'array' : typeof v}`);
+      else if (v.trim() === '') errors.push(`${at} must not be empty`);
+    }
+  }
+  return errors;
+}
+
 function checkEntity(e, { vocab, ids, reqLangs }) {
   const errors = [];
   const warnings = [];
@@ -36,16 +57,32 @@ function checkEntity(e, { vocab, ids, reqLangs }) {
 
   if (!isLangMap(e.names) || Object.keys(e.names).length === 0) {
     err('names must have at least one language');
-  } else if (e.type !== 'intent') {
-    // Intent names are internal labels — en-only is fine; their multilingual content is `examples`.
-    const missing = reqLangs.filter((l) => !e.names[l]);
-    if (missing.length) warn(`names missing required languages: ${missing.join(', ')}`);
+  } else {
+    langMapValueErrors(e.names, 'names').forEach(err);
+    if (e.type !== 'intent') {
+      // Intent names are internal labels — en-only is fine; their multilingual content is `examples`.
+      const missing = reqLangs.filter((l) => !e.names[l]);
+      if (missing.length) warn(`names missing required languages: ${missing.join(', ')}`);
+    }
+  }
+
+  // how_to.* is embedded verbatim as the subscribe/unsubscribe chunks (chunker.js:134-135).
+  if (e.how_to != null) {
+    if (!isLangMap(e.how_to)) err('how_to must be an object');
+    else {
+      for (const key of ['subscribe', 'unsubscribe']) {
+        if (e.how_to[key] == null) continue;
+        if (!isLangMap(e.how_to[key])) err(`how_to.${key} must be a language map`);
+        else langMapValueErrors(e.how_to[key], `how_to.${key}`).forEach(err);
+      }
+    }
   }
 
   if (KNOWLEDGE_TYPES.includes(e.type)) {
     if (!isLangMap(e.description) || Object.keys(e.description).length === 0) {
       err('description must have at least one language');
     } else {
+      langMapValueErrors(e.description, 'description').forEach(err);
       const missing = reqLangs.filter((l) => !e.description[l]);
       if (missing.length) warn(`description missing required languages: ${missing.join(', ')}`);
     }
@@ -58,8 +95,14 @@ function checkEntity(e, { vocab, ids, reqLangs }) {
     if (!isInt(e.validity_days) || e.validity_days <= 0) err('validity_days must be an integer > 0');
   }
   for (const f of ['data_mb', 'minutes_onnet', 'minutes_offnet', 'sms_onnet', 'sms_offnet',
-    'repeat_purchase_fee_iqd', 'repeat_purchase_threshold']) {
+    'repeat_purchase_fee_iqd']) {
     if (e[f] != null && (!isInt(e[f]) || e[f] < 0)) err(`${f} must be a non-negative integer`);
+  }
+  // The threshold is rendered as an ordinal ("from the 2nd subscription"), so 0 is not a
+  // valid value — it produced "from the 0th subscription" in an embedded chunk (audit item 8).
+  if (e.repeat_purchase_threshold != null &&
+      (!isInt(e.repeat_purchase_threshold) || e.repeat_purchase_threshold < 1)) {
+    err('repeat_purchase_threshold must be an integer ≥ 1 (it renders as an ordinal)');
   }
 
   // Dates
@@ -81,6 +124,8 @@ function checkEntity(e, { vocab, ids, reqLangs }) {
     if (!e.target_flow || !(e.target_flow in (vocab.flows ?? {}))) {
       err(`target_flow "${e.target_flow}" not in flows vocab`);
     }
+    if (e.examples != null && !isLangMap(e.examples)) err('examples must be a language map');
+    else langMapValueErrors(e.examples, 'examples', { array: true }).forEach(err);
     const total = Object.values(e.examples ?? {}).flat().filter(Boolean).length;
     if (total === 0) err('intent needs at least one example utterance');
   }

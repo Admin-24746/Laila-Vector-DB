@@ -24,11 +24,20 @@ const args = new Set(process.argv.slice(2));
 const REBUILD = args.has('--rebuild');
 const DRY_RUN = args.has('--dry-run');
 
+/**
+ * The `_` convention marks something as not-for-ingest (`_TEMPLATE.json`). Testing only the
+ * BASENAME meant a whole `data/seed/_drafts/` folder was ingested anyway (audit 2026-08-22
+ * item 7) — every path segment has to honour the convention.
+ * @param {string} rel path relative to the seed dir
+ */
+export const isIngestableSeedFile = (rel) =>
+  rel.endsWith('.json') && !rel.split(/[\\/]/).some((seg) => seg.startsWith('_'));
+
 function loadSeedEntities() {
   const entities = [];
   const files = readdirSync(SEED_DIR, { recursive: true })
     .map(String)
-    .filter((f) => f.endsWith('.json') && !path.basename(f).startsWith('_'));
+    .filter(isIngestableSeedFile);
   for (const rel of files) {
     const parsed = JSON.parse(readFileSync(path.join(SEED_DIR, rel), 'utf8'));
     for (const e of Array.isArray(parsed) ? parsed : [parsed]) {
@@ -48,9 +57,30 @@ function stableStringify(v) {
   return JSON.stringify(v);
 }
 
-const contentHash = (e) => {
+/**
+ * Everything a chunk's TEXT depends on — not just the entity's own fields.
+ * `entityToChunks` bakes in the *names of related entities* (`conflicts_with`, via `nameOf`)
+ * and the *vocab labels* of the codes it references. Hashing only the entity meant renaming
+ * `bundle_b` left `bundle_a`'s conflict chunk quoting the old name forever: `bundle_a` is
+ * byte-identical, so it never re-embeds (audit 2026-08-22 item 4). Only the referenced
+ * entries go in, so an unrelated vocab edit still doesn't re-embed the world.
+ * @param {object} e @param {{byId:Map<string,object>, vocab:object}} deps
+ */
+function chunkDeps(e, { byId, vocab }) {
+  const related = {};
+  for (const id of e.conflicts_with ?? []) related[id] = byId.get(id)?.names ?? null;
+  const labels = {};
+  for (const [group, codes] of [['locations', e.eligible_locations], ['service_classes', e.eligible_service_classes]]) {
+    for (const c of codes ?? []) labels[`${group}.${c}`] = vocab?.[group]?.[c]?.labels ?? null;
+  }
+  return { related, labels };
+}
+
+export const contentHash = (e, deps) => {
   const { _file, ...rest } = e;
-  return createHash('sha256').update(stableStringify(rest)).digest('hex');
+  return createHash('sha256')
+    .update(stableStringify({ entity: rest, deps: chunkDeps(e, deps) }))
+    .digest('hex');
 };
 
 const loadState = () => (existsSync(STATE_FILE) ? JSON.parse(readFileSync(STATE_FILE, 'utf8')) : {});
@@ -95,9 +125,14 @@ async function main() {
     console.error('\nRejected entities were NOT ingested (previous versions, if any, remain live).');
   }
 
+  // Related-entity lookup — shared by the chunker (`nameOf`) and by the change-detection
+  // hash, which must see the same related names the chunker will bake in.
+  const byId = new Map(entities.map((e) => [e.entity_id, e]));
+  const deps = { byId, vocab };
+
   // Change detection (docs/07 §6)
   const state = REBUILD ? {} : loadState();
-  const changed = valid.filter((e) => state[e.entity_id] !== contentHash(e));
+  const changed = valid.filter((e) => state[e.entity_id] !== contentHash(e, deps));
   const unchanged = valid.length - changed.length;
   // Retirement must key off what is ON DISK, not what passed validation. Building this from
   // `valid` meant a REJECTED entity looked "removed" and had all its live points deleted —
@@ -106,10 +141,7 @@ async function main() {
   const removed = retiredIds(state, entities);
 
   // Chunk
-  const nameOf = (() => {
-    const byId = new Map(entities.map((e) => [e.entity_id, e]));
-    return (id, lang) => byId.get(id)?.names?.[lang] ?? byId.get(id)?.names?.en ?? id;
-  })();
+  const nameOf = (id, lang) => byId.get(id)?.names?.[lang] ?? byId.get(id)?.names?.en ?? id;
   const perEntityChunks = changed.map((e) => ({
     entity: e,
     chunks: entityToChunks(e, { vocab, nameOf }),
@@ -162,7 +194,7 @@ async function main() {
     console.log(`Retired ${id} (source file removed).`);
   }
 
-  for (const e of changed) state[e.entity_id] = contentHash(e);
+  for (const e of changed) state[e.entity_id] = contentHash(e, deps);
   writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 
   console.log(`\nDone in ${((Date.now() - t0) / 1000).toFixed(1)}s — upserted ${points.length} chunks for ${changed.length} entities; collection now holds ${await countPoints()} points.`);

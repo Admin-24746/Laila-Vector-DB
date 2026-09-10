@@ -5,6 +5,7 @@
 
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CONFIG, ROOT_DIR } from '../lib/config.js';
 import { retrieve } from '../service/retrieve.js';
 import { decide } from '../service/route.js';
@@ -74,7 +75,7 @@ async function routeRaw(items) {
   return raw;
 }
 
-function scoreRouting(raw, thresholds) {
+export function scoreRouting(raw, thresholds) {
   let correct = 0;
   let falseRoutes = 0;
   const clarifyItems = { total: 0, correctAbstain: 0 };
@@ -90,7 +91,13 @@ function scoreRouting(raw, thresholds) {
     if (expected === CLARIFY) {
       clarifyItems.total++;
       if (d.action !== 'route') { clarifyItems.correctAbstain++; correct++; }
-      else failures.push({ query: item.query, expected, got: predicted, reason: d.reason });
+      else {
+        // An item that should have been clarified but was confidently routed IS a false
+        // route — the exact failure the ≤0.05 gate exists to catch. This branch used to
+        // `continue` before counting it, under-reporting the headline rate (audit item 2).
+        falseRoutes++;
+        failures.push({ query: item.query, expected, got: predicted, reason: d.reason });
+      }
       continue;
     }
     if (d.action === 'route' && d.flow === expected) correct++;
@@ -206,7 +213,14 @@ async function main() {
   console.log(`\nReport saved: ${path.relative(ROOT_DIR, file)}`);
 }
 
-main().catch((err) => {
-  console.error(`Eval failed: ${err.message}`);
-  process.exit(1);
-});
+// Only run the eval when this file is the entry point — importing it (e.g. from
+// test/audit-round2.test.js to reach scoreRouting) must not fire a real eval at the stack.
+const invokedDirectly = process.argv[1]
+  && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (invokedDirectly) {
+  main().catch((err) => {
+    console.error(`Eval failed: ${err.message}`);
+    process.exit(1);
+  });
+}

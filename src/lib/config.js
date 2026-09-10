@@ -15,18 +15,39 @@ if (existsSync(envFile)) {
   }
 }
 
+// Numeric env coercion. `Number('')` is 0 and `??` only catches null/undefined, so a
+// present-but-empty line (`ROUTE_TAU_HIGH=`) used to silently zero the value — which makes
+// the router confidently route a garbage query, zeroes TOP_K, 503s every embed, and moves
+// the port (audit 2026-08-22 item 1). Empty, whitespace and non-numeric all fall back to the
+// default, loudly.
+export function coerceNum(raw, fallback, name = 'value') {
+  if (raw == null || String(raw).trim() === '') return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) {
+    console.warn(`WARNING: ${name}="${raw}" is not a number — using default ${fallback}.`);
+    return fallback;
+  }
+  return parsed;
+}
+
+const num = (name, fallback) => coerceNum(process.env[name], fallback, name);
+
 export const CONFIG = {
   qdrantUrl: process.env.QDRANT_URL ?? 'http://localhost:6333',
   teiUrl: process.env.TEI_URL ?? 'http://localhost:8080',
   collection: process.env.COLLECTION ?? 'laila_knowledge',
-  port: Number(process.env.PORT ?? 8090),
+  port: num('PORT', 8090),
   serviceToken: process.env.SERVICE_TOKEN || null,
-  topK: Number(process.env.TOP_K ?? 5),
+  topK: num('TOP_K', 5),
+  // Business timezone. `valid_from`/`valid_to` are calendar dates in Asiacell's local time,
+  // so "today" must be resolved there — comparing against UTC expired a promo at 03:00
+  // Baghdad instead of local midnight (audit 2026-08-22 item 9).
+  timezone: process.env.TIMEZONE || 'Asia/Baghdad',
   // Query-time dependency timeouts, ms (docs/06 §7): a hung TEI/Qdrant must fail fast
   // (→ 503, Druid falls back) rather than hang Druid. Ingestion keeps its own larger
   // embed ceiling (see lib/embedder.js).
-  embedTimeoutMs: Number(process.env.EMBED_TIMEOUT_MS ?? 10_000),
-  qdrantTimeoutMs: Number(process.env.QDRANT_TIMEOUT_MS ?? 10_000),
+  embedTimeoutMs: num('EMBED_TIMEOUT_MS', 10_000),
+  qdrantTimeoutMs: num('QDRANT_TIMEOUT_MS', 10_000),
   // Content gate (docs/20, docs/25 §2 `status`). Every shipped seed entity is status:"draft"
   // with invented shortcodes and prices (`attributes.review_note`), and the query filter used
   // to exclude only "retired" — so placeholder facts were answerable. Draft stays visible in
@@ -37,9 +58,9 @@ export const CONFIG = {
     : process.env.NODE_ENV === 'production',
   // Routing thresholds (docs/06 §5, D7) — cosine scale; calibrated via `npm run eval:sweep`.
   route: {
-    tauHigh: Number(process.env.ROUTE_TAU_HIGH ?? 0.8),
-    tauLow: Number(process.env.ROUTE_TAU_LOW ?? 0.6),
-    margin: Number(process.env.ROUTE_MARGIN ?? 0.05),
+    tauHigh: num('ROUTE_TAU_HIGH', 0.8),
+    tauLow: num('ROUTE_TAU_LOW', 0.6),
+    margin: num('ROUTE_MARGIN', 0.05),
   },
   // Generation LLM (docs/15 §6) — any OpenAI-compatible endpoint (Ollama, OpenAI, Gemini
   // compat…). Empty = /v1/answer disabled and query rewriting (docs/12) passes through.

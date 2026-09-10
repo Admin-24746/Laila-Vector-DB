@@ -126,7 +126,11 @@ export function entityToChunks(entity, { vocab = {}, nameOf = (id) => id } = {})
   const hasEligibility =
     entity.eligible_locations?.length || entity.eligible_service_classes?.length ||
     entity.valid_from || entity.valid_to;
-  const hasFees = entity.repeat_purchase_fee_iqd != null && entity.repeat_purchase_threshold != null;
+  // A threshold below 1 has no meaning as an ordinal and rendered the customer-facing
+  // nonsense "from the 0th subscription" into an embedded chunk (audit item 8). Validation
+  // now rejects it; this guard keeps the nonsense out of the index either way.
+  const hasFees = entity.repeat_purchase_fee_iqd != null &&
+    Number.isInteger(entity.repeat_purchase_threshold) && entity.repeat_purchase_threshold >= 1;
 
   for (const lang of langs) {
     const sectionName = entity.type === 'terminology' ? 'definition' : 'overview';

@@ -91,11 +91,38 @@ const TOKEN_SPLIT = /[\s؟?!.,،:؛;'"()\[\]{}«»…-]+/;
 // Both sides are orthography-folded (normalizeForSparse: أ→ا, ى→ي, ة→ه…) so a correct
 // rewrite that shifts dialect spelling (ألغى vs الغيها) still anchors — probed 2026-07-16:
 // raw matching rejected 7B's semantically-correct combo-cancel rewrite at 0.50.
+// Longest clitic run tolerated when matching a rewrite token to a conversation token:
+// Arabic/Kurdish proclitics (و ب ل ك ف ال, and combinations like وال) and enclitics
+// (ها ه ي ك) attach to the word, so `بباقة` must still anchor to `باقة`.
+const AFFIX_MAX = 3;
+
+const tokenize = (s) => normalizeForSparse(s).split(TOKEN_SPLIT).filter((t) => t.length >= 2);
+
+/**
+ * Does a rewrite token occur in the conversation as a WORD (allowing attached clitics)?
+ * The old test was `hay.includes(t)` against the whole conversation as one string — a
+ * free substring match, under which the hallucinated rewrite "sub scribe to bun" scored
+ * a perfect 1.00 against a corpus merely containing "subscribe" and "bundle", and sailed
+ * through the 0.6 guard (audit 2026-08-22 item 5). Latin script has no clitics, so it
+ * requires an exact (orthography-folded) token match.
+ */
+function tokenAnchored(t, corpusTokens) {
+  if (corpusTokens.has(t)) return true;
+  if (!ARABIC_SCRIPT.test(t) || t.length < 3) return false;
+  for (const c of corpusTokens) {
+    if (!ARABIC_SCRIPT.test(c) || c.length < 3) continue;
+    const [short, long] = t.length <= c.length ? [t, c] : [c, t];
+    if (long.length - short.length > AFFIX_MAX) continue;
+    if (long.startsWith(short) || long.endsWith(short)) return true;
+  }
+  return false;
+}
+
 export function anchorRatio(clean, corpus) {
-  const tokens = normalizeForSparse(clean).split(TOKEN_SPLIT).filter((t) => t.length >= 2);
+  const tokens = tokenize(clean);
   if (!tokens.length) return 0;
-  const hay = normalizeForSparse(corpus);
-  return tokens.filter((t) => hay.includes(t)).length / tokens.length;
+  const corpusTokens = new Set(tokenize(corpus));
+  return tokens.filter((t) => tokenAnchored(t, corpusTokens)).length / tokens.length;
 }
 
 const isAnchored = (clean, corpus) => anchorRatio(clean, corpus) >= 0.6;

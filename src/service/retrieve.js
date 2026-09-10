@@ -17,6 +17,24 @@ const matchOrEmpty = (key, value) => ({
   ],
 });
 
+const DAY_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: CONFIG.timezone, year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+/**
+ * Today's calendar date in the business timezone, as `YYYY-MM-DDT00:00:00Z`.
+ *
+ * `valid_from`/`valid_to` are date-only (docs/25) and Qdrant's datetime index reads a bare
+ * date as midnight UTC — so comparing them against `new Date().toISOString()` retired a
+ * promo dated today the moment UTC midnight passed, i.e. **03:00 Baghdad** rather than
+ * local midnight (audit 2026-08-22 item 9). Anchoring both sides to the same midnight-UTC
+ * convention makes `valid_to: "2026-09-10"` valid for the whole Baghdad day.
+ * @param {Date} [at] injectable clock for tests
+ */
+export function businessDay(at = new Date()) {
+  return `${DAY_FMT.format(at)}T00:00:00Z`;
+}
+
 export function buildFilter({ types, language, filters = {} }) {
   const must = [
     { key: 'type', match: { any: types } },
@@ -25,10 +43,11 @@ export function buildFilter({ types, language, filters = {} }) {
   if (filters.location) must.push(matchOrEmpty('eligible_locations', filters.location));
   if (filters.service_class) must.push(matchOrEmpty('eligible_service_classes', filters.service_class));
 
-  // Date validity pre-filter (docs/06 §2.2): expired promos can never surface
-  const now = new Date().toISOString();
-  must.push({ should: [{ key: 'valid_from', range: { lte: now } }, { is_empty: { key: 'valid_from' } }] });
-  must.push({ should: [{ key: 'valid_to', range: { gte: now } }, { is_empty: { key: 'valid_to' } }] });
+  // Date validity pre-filter (docs/06 §2.2): expired promos can never surface.
+  // Compared as a calendar DAY, not an instant — see businessDay().
+  const today = businessDay();
+  must.push({ should: [{ key: 'valid_from', range: { lte: today } }, { is_empty: { key: 'valid_from' } }] });
+  must.push({ should: [{ key: 'valid_to', range: { gte: today } }, { is_empty: { key: 'valid_to' } }] });
 
   // Retired content is never answerable; draft content is answerable only in the sandbox
   // (CONFIG.excludeDraft — see lib/config.js). docs/25 §2 status values.
@@ -123,10 +142,21 @@ export async function entityCard(entityId, language) {
   } catch (err) {
     throw DependencyError.wrap('qdrant', err); // docs/06 §7 — expand fails like search fails
   }
-  const order = ['overview', 'definition', 'subscribe', 'unsubscribe', 'eligibility', 'fees_edgecases', 'conflicts'];
-  return res.points
-    .map((p) => p.payload)
-    .sort((a, b) => order.indexOf(a.section) - order.indexOf(b.section))
-    .map((p) => p.text)
-    .join('\n');
+  return orderSections(res.points.map((p) => p.payload)).map((p) => p.text).join('\n');
+}
+
+const SECTION_ORDER = ['overview', 'definition', 'subscribe', 'unsubscribe', 'eligibility', 'fees_edgecases', 'conflicts'];
+
+/**
+ * Reading order for the entity card handed to the LLM.
+ * The sort used `order.indexOf(section)` directly, and `indexOf` returns -1 for a section
+ * this list does not know — which sorted an unrecognised section AHEAD of the overview and
+ * led the card (audit 2026-08-22 item 6). Unknown sections now sort last, alphabetically
+ * among themselves so the card is stable run to run.
+ * @param {{section:string}[]} payloads
+ */
+export function orderSections(payloads) {
+  const rank = (s) => { const i = SECTION_ORDER.indexOf(s); return i === -1 ? SECTION_ORDER.length : i; };
+  return [...payloads].sort((a, b) =>
+    rank(a.section) - rank(b.section) || String(a.section).localeCompare(String(b.section)));
 }
