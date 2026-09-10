@@ -65,3 +65,84 @@ test('empty retrieval → deterministic not-found in the right language, no LLM'
   const unknownLang = await composeAnswer({ question: '?', results: [], facts: {}, language: 'xx' });
   assert.equal(unknownLang.answer, NOT_FOUND.en); // unmapped language falls back to en
 });
+
+// ── Per-entity number binding (README design call, closed 2026-09-10) ─────────
+// The guardrail was a flat bag of digits: a price BORROWED from another bundle in the
+// same top-5 passed and came back `grounded: true`. Numbers are now bound to the entity
+// whose evidence carries them.
+const twoBundles = [
+  {
+    chunk_id: 'bundle_1601::overview::en', entity_id: 'bundle_1601',
+    text: '[Combo Bundle · BTL bundle] Combo costs 5000 IQD for 28 days.',
+    payload: { name: 'Combo Bundle', aliases: ['combo'] },
+  },
+  {
+    chunk_id: 'bundle_1602::overview::en', entity_id: 'bundle_1602',
+    text: '[Super Net · ATL bundle] Super Net costs 10000 IQD for 30 days.',
+    payload: { name: 'Super Net', aliases: ['super net', 'supernet'] },
+  },
+];
+
+test('a price borrowed from another retrieved bundle is a violation', () => {
+  // The whole point: 10000 IS in the evidence, just not as a fact of Combo.
+  const v = unsupportedNumbers('Combo Bundle costs 10000 IQD.', twoBundles, {});
+  assert.equal(v.length, 1, `expected one violation, got ${JSON.stringify(v)}`);
+  assert.match(v[0], /^misattributed_number: 10000 is not a fact of bundle_1601$/);
+});
+
+test('each entity keeps its own numbers in a legitimate comparison', () => {
+  assert.deepEqual(
+    unsupportedNumbers('Combo costs 5000 IQD. Super Net costs 10000 IQD.', twoBundles, {}),
+    [], 'a correct comparison must still pass',
+  );
+  assert.deepEqual(
+    unsupportedNumbers('Combo is 5000 IQD while Super Net is 10000 IQD.', twoBundles, {}),
+    [], 'clause connectives segment the answer too',
+  );
+  // ...and swapping the two prices must NOT pass.
+  const swapped = unsupportedNumbers('Combo is 10000 IQD while Super Net is 5000 IQD.', twoBundles, {});
+  assert.equal(swapped.length, 2, `both halves are wrong: ${JSON.stringify(swapped)}`);
+});
+
+test('an answer naming no entity is credited to the top result', () => {
+  assert.deepEqual(unsupportedNumbers('It costs 5000 IQD.', twoBundles, {}), []);
+  const v = unsupportedNumbers('It costs 10000 IQD.', twoBundles, {});
+  assert.equal(v.length, 1, 'the top result is Combo, so 10000 is misattributed');
+});
+
+test('spelled-out magnitudes no longer bypass the guardrail', () => {
+  const evidence = [{
+    chunk_id: 'bundle_1601::overview::en', entity_id: 'bundle_1601',
+    text: 'Combo costs 5000 IQD.', payload: { name: 'Combo' },
+  }];
+  // "ten thousand" has no digit-run at all — it used to sail straight through.
+  const v = unsupportedNumbers('It costs ten thousand dinars.', evidence, {});
+  assert.deepEqual(v, ['unsupported_magnitude: thousand']);
+
+  // Arabic-script magnitudes count too (JS \b never matches an Arabic boundary).
+  assert.deepEqual(
+    unsupportedNumbers('السعر سبعة آلاف دينار', evidence, {}),
+    ['unsupported_magnitude: آلاف'],
+  );
+
+  // Echoing a magnitude the evidence itself uses stays legal.
+  const worded = [{
+    chunk_id: 'bundle_1601::overview::en', entity_id: 'bundle_1601',
+    text: 'Combo costs five thousand IQD.', payload: { name: 'Combo' },
+  }];
+  assert.deepEqual(unsupportedNumbers('It costs five thousand IQD.', worded, {}), []);
+});
+
+test('ordinary words are not mistaken for magnitudes (precision)', () => {
+  const evidence = [{
+    chunk_id: 'bundle_1601::overview::en', entity_id: 'bundle_1601',
+    text: 'Combo costs 5000 IQD.', payload: { name: 'Combo' },
+  }];
+  for (const clean of [
+    'Combo is one of our bundles.',
+    'You can subscribe at any time.',
+    'This is the first step.',
+  ]) {
+    assert.deepEqual(unsupportedNumbers(clean, evidence, {}), [], `must not fire on: ${clean}`);
+  }
+});

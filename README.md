@@ -53,8 +53,9 @@ logs/            service audit log JSONL (gitignored)
 this laptop.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
 `ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
 regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues`,
-**not pushed**. `npm test` = **145 tests, 145 pass / 0 fail** (the integration test no longer
-skips — Qdrant is live). `npm audit` = **0 vulnerabilities** after a fresh `npm audit fix` on
+**not pushed**. `npm test` = **138 tests, 138 pass / 0 fail** (the integration test no longer
+skips — Qdrant is live; the count fell from 150 because the legacy tree's four test files went
+with it, replaced by `test/lib-primitives.test.js`). `npm audit` = **0 vulnerabilities** after a fresh `npm audit fix` on
 2026-09-10: new `fast-uri` SSRF/host-confusion advisories and a `fastify` schema-validation
 bypass had landed since August, so **fastify is now 5.12.3** (re-verified: full suite green,
 endpoints unchanged). **The content work (`content-kit/`) is now the only thing left.**
@@ -101,10 +102,11 @@ synthetic seed, so committing τ_high=0.50 would bake a placeholder-derived numb
 Recalibrate *after* real utterances land — that ordering is the whole point of the sweep.
 
 > ⚠️ **`HANDOVER.md` and `docs/29` describe a DIFFERENT, DEAD implementation** (`src/*.js`,
-> port 7100, `content/entities/`). Commit `bd84b2e` merged that older tree back into this
-> repo. Both trees default to the same Qdrant collection and their sparse analyzers are
-> mutually unintelligible for Arabic/Kurdish — **following the HANDOVER runbook corrupts the
-> live index.** This README is the authoritative document. Details in the audit section.
+> port 7100, `content/entities/`, `EMBEDDER=mock`). **That tree was DELETED on 2026-09-10**,
+> so the "corrupts the live index" hazard is gone — but every command in those two documents
+> now targets modules that no longer exist. This README is the authoritative document.
+> `HANDOVER.md` carries a banner saying so; `content/` was kept (hand-authored data, read by
+> nothing now) and should be migrated into `data/seed/` and then deleted.
 
 ### 2026-08-21/22 — security & correctness audit, and the fixes
 
@@ -161,16 +163,32 @@ the `{0,40}` bounds keep backtracking linear); `decide()` cannot crash on an und
 (with no rival `gap = top.score >= tauHigh >= margin`, so it routes); and there is no
 `child_process`, `eval()`, `new Function` or dynamic `require` anywhere in the tree.
 
-**Still open by design decision, not neglect:**
+**Both design calls are now CLOSED (2026-09-10):**
 
-- **The number guardrail is a flat bag of digits** (`src/service/answer.js:20`) with no binding
-  between a number and its entity. It blocks *invented* numbers but allows a price **borrowed
-  from another bundle in the same top-5** — and returns it as `grounded: true`. Spelled-out
-  numbers ("five thousand", "سبعة آلاف") skip the check entirely. Rebinding it per entity
-  changes the grounding contract, so it needs a decision, not a patch.
-- **The legacy `src/*.js` tree.** Deleting it means first moving
-  `test/integration.qdrant.test.js` onto the current pipeline — that test imports the *dead*
-  modules and is the project's only integration coverage.
+- ✅ **The number guardrail is bound per entity.** It was a flat bag of digits, so a price
+  **borrowed from another bundle in the same top-5** passed and came back `grounded: true`.
+  Numbers now belong to the entity whose evidence carries them; the answer is segmented on
+  sentence enders and comparison connectives ("… while …", "بينما"), each segment is credited
+  to the entity named last in it (falling back to the top result), and a number used outside
+  its owner is reported as `misattributed_number`. A legitimate comparison still passes.
+  Spelled-out magnitudes are covered too: "five thousand" / "سبعة آلاف" contain no digit-run
+  and used to bypass the check entirely — magnitude WORDS are now grounded exactly like
+  digits, so echoing the evidence is legal and inventing one is not. Only magnitude words
+  are matched, so "one of our bundles" does not trip it.
+  **Contract note:** this required `payload.name` and `payload.aliases`, so the chunker now
+  writes them — **a re-ingest (`npm run ingest:rebuild`) is required**, and `guardrail.violations`
+  can now contain `misattributed_number`/`unsupported_magnitude` strings alongside bare digits.
+- ✅ **The legacy `src/*.js` tree is deleted** (13 modules + 4 test files). What had blocked
+  it was `test/integration.qdrant.test.js` — the only integration coverage — importing the
+  dead modules. It was **rewritten onto the current pipeline first** and now drives the real
+  `node src/ingest/run.js` CLI into a throwaway collection, then asserts retrieval, the hard
+  language filter, location filtering, routing, and idempotent re-ingest (it shells out
+  because the pipeline reads `CONFIG` at import time; `INGEST_STATE_FILE` was added so it
+  cannot clobber the working tree's state). Unit coverage worth keeping moved to
+  `test/lib-primitives.test.js`. Not ported, deliberately: `applyLangBoost` and
+  `collectGroundedFacts` tested *designs that no longer exist*, not code that moved.
+  ⚠️ **`content/` was NOT deleted** — it is hand-authored entity data and only the removed
+  code read it. Migrate anything useful into `data/seed/`, then delete it.
 
 ### 2026-07-19 second session — safety-filter precision fixes (committed)
 

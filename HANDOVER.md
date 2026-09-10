@@ -5,11 +5,19 @@
 > **Read [`README.md`](README.md) instead.** This document describes the *original*
 > implementation (`src/*.js`, port 7100, `content/entities/`, `EMBEDDER=mock`). That tree was
 > replaced by `src/lib/` + `src/service/` + `data/seed/`, and commit `bd84b2e` (2026-08-14)
-> merged the old one back into the repo alongside the new one. **Both are on disk. Only the
-> new one is wired to `package.json`.**
+> merged the old one back into the repo alongside the new one.
 >
-> Running the commands below against the current stack **corrupts the live index** — verified
-> 2026-08-21:
+> ### ✅ The legacy tree was DELETED on 2026-09-10 — the hazard below is now historical.
+>
+> The 13 `src/*.js` files and their four test files are gone. What had blocked the deletion
+> was that `test/integration.qdrant.test.js` — the project's only integration coverage —
+> imported the dead modules; it was rewritten onto the current pipeline first, and the unit
+> coverage that was worth keeping moved to `test/lib-primitives.test.js`. **`content/` was
+> deliberately NOT deleted**: it is hand-authored entity data, and nothing but the removed
+> code read it. Migrate anything useful into `data/seed/`, then delete it.
+>
+> The rest of this banner records *why* the runbook below must not be followed — every
+> command in it still targets modules that no longer exist. Verified 2026-08-21:
 >
 > - Both trees default to the **same Qdrant collection** (`laila_knowledge`).
 > - The two sparse analyzers hash the same Arabic token to **different indices** (FNV-1a over
@@ -23,7 +31,8 @@
 >   `entity_id` first.
 >
 > Also stale here: `qdrant_bin/` and `qdrant_storage/` are described in §7 as "gitignored
-> already" — they are **committed** (see README). Paths under
+> already" — they are **committed** (see README). And the native `qdrant.exe` writes to
+> `./storage`, not `./qdrant_storage`; `qdrant_storage/` is a stale 2026-08-11 database. Paths under
 > `$env:USERPROFILE\Desktop\DevOps\Vector DB` are from the previous machine; the project now
 > lives at `D:\Projects\DevOps\Vector DB`.
 >

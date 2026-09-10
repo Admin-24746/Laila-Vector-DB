@@ -54,8 +54,13 @@ function ordinalEn(n) {
   return `${n}${suffix}`;
 }
 
+// The entity's display name in one language, with the same fallback chain the header uses.
+// Exported onto the payload so the answer guardrail can tell WHICH entity a number in an
+// answer belongs to (docs/08 §3) instead of pooling every retrieved number into one bag.
+export const nameFor = (entity, lang) => entity.names?.[lang] ?? entity.names?.en ?? entity.entity_id;
+
 function headerFor(entity, lang) {
-  const name = entity.names?.[lang] ?? entity.names?.en ?? entity.entity_id;
+  const name = nameFor(entity, lang);
   const label = SUBTYPE_LABELS[entity.subtype] ?? TYPE_LABELS[entity.type] ?? entity.type;
   const aliases = entity.aliases?.length ? ` · aliases: ${entity.aliases.join(', ')}` : '';
   return `[${name} · ${label}${aliases}]`;
@@ -82,6 +87,7 @@ function basePayload(entity) {
     'repeat_purchase_fee_iqd', 'repeat_purchase_threshold',
     'eligible_locations', 'eligible_service_classes',
     'belongs_to_service', 'conflicts_with', 'offers', 'target_flow',
+    'aliases', // needed by the per-entity answer guardrail
   ];
   for (const k of passthrough) if (entity[k] != null) p[k] = entity[k];
   if (entity.valid_from) p.valid_from = `${entity.valid_from}T00:00:00Z`;
@@ -109,7 +115,11 @@ export function entityToChunks(entity, { vocab = {}, nameOf = (id) => id } = {})
       section,
       language,
       text,
-      payload: { ...base, section, language, text, chunk_id: `${entity.entity_id}::${section}::${language}` },
+      payload: {
+        ...base, section, language, text,
+        name: nameFor(entity, language),
+        chunk_id: `${entity.entity_id}::${section}::${language}`,
+      },
     });
   };
 

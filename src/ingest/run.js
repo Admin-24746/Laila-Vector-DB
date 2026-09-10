@@ -17,7 +17,9 @@ import {
 } from '../lib/qdrant.js';
 
 const SEED_DIR = path.join(ROOT_DIR, 'data', 'seed');
-const STATE_FILE = path.join(ROOT_DIR, '.ingest-state.json');
+// Overridable so the integration test can drive a real ingest into a throwaway collection
+// without clobbering the working tree's state file (docs/07 §6).
+const STATE_FILE = process.env.INGEST_STATE_FILE || path.join(ROOT_DIR, '.ingest-state.json');
 const UPSERT_BATCH = 128;
 
 const args = new Set(process.argv.slice(2));

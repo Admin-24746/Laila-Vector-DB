@@ -15,6 +15,13 @@ test('detectLanguage: four languages plus Arabizi-as-en', () => {
   assert.equal(detectLanguage('ئەوە چۆن هەڵدەوەشێنمەوە؟'), 'ckb');
   assert.equal(detectLanguage('Li Duhok şaxa we heye?'), 'kmr');
   assert.equal(detectLanguage('shlon aghayer il baqa'), 'en'); // Arabizi stays en (soft signal only)
+  // Ported from the retired test/langdetect.test.js: junk input must degrade, never throw.
+  // The current detector returns a bare code (no {script, confidence}), so empty and
+  // punctuation-only text fall through to the 'en' default rather than reporting null.
+  for (const junk of ['', '   ', '123 !!', '؟؟؟']) {
+    assert.doesNotThrow(() => detectLanguage(junk), `threw on ${JSON.stringify(junk)}`);
+    assert.ok(typeof detectLanguage(junk) === 'string');
+  }
 });
 
 test('follow-up gate requires history', () => {

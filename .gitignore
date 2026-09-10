@@ -6,6 +6,8 @@ eval/runs/
 .claude/
 
 # Qdrant's NATIVE default storage path when qdrant.exe is launched from the repo root.
-# NOTE: this is ./storage, NOT ./qdrant_storage — the tracked qdrant_storage/ is a stale
-# 2026-08-11 database and is NOT what the running instance reads (verified 2026-09-10).
+# NOTE: this is ./storage, NOT ./qdrant_storage. The old qdrant_storage/ was a stale
+# 2026-08-11 database that had been committed to git; it was read by nothing and deleted
+# on 2026-09-10. Both names are ignored so neither DB is ever committed again.
 storage/
+qdrant_storage/

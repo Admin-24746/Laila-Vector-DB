@@ -14,19 +14,102 @@ export { ANSWER_PROMPT_VERSION };
 // Every digit-run in a text, separators stripped: "5,000 IQD" → "5000"; "*123*1#" → "123","1".
 function numbersIn(text) {
   const cleaned = normalizeDigits(String(text)).replace(/(\d)[,.](?=\d{3}\b)/g, '$1');
-  return new Set(cleaned.match(/\d+/g) ?? []);
+  const found = new Set(cleaned.match(/\d+/g) ?? []);
+  for (const w of magnitudeWordsIn(cleaned)) found.add(w);
+  return found;
 }
 
-function allowedNumbers(results, facts) {
-  const allowed = new Set();
-  for (const r of results) for (const n of numbersIn(r.text)) allowed.add(n);
-  for (const v of Object.values(facts)) if (v != null) for (const n of numbersIn(String(v))) allowed.add(n);
-  return allowed;
+// Spelled-out magnitudes used to bypass the guardrail entirely: "five thousand" and
+// "سبعة آلاف" contain no digit-run, so an invented price written in words was returned as
+// `grounded: true`. Only MAGNITUDE words are matched — in this domain a price or data
+// amount always carries one ("thousand", "ألف", "هەزار") — which keeps ordinary words like
+// "one of the bundles" from tripping the guard. They are treated exactly like digit-runs:
+// bound to the entity whose evidence contains them, so echoing the evidence stays legal
+// while inventing "ten thousand" out of nothing does not.
+const MAGNITUDE_LATIN = /\b(?:hundred|thousand|million|billion|sed|hezar|milyon)\b/gi;
+// JS \b never matches at an Arabic-script boundary (the docs/12 edge-guard note), so the
+// Arabic-script forms are matched bare.
+const MAGNITUDE_ARABIC = /(?:مئة|مائة|ميه|آلاف|ألف|الف|ملايين|مليون|هەزار|سەد|ملیۆن)/g;
+
+function magnitudeWordsIn(text) {
+  const out = new Set();
+  for (const m of String(text).matchAll(MAGNITUDE_LATIN)) out.add(`word:${m[0].toLowerCase()}`);
+  for (const m of String(text).matchAll(MAGNITUDE_ARABIC)) out.add(`word:${m[0]}`);
+  return out;
 }
 
+// ── Per-entity number binding (docs/08 §3) ───────────────────────────────────
+// The guardrail used to pool every retrieved number into ONE flat set, so a price
+// BORROWED from another bundle in the same top-5 passed and was returned as
+// `grounded: true` — the costliest error this endpoint can make. Numbers are now bound
+// to the entity they came from, and a number may only be used while that entity is the
+// one the answer is talking about.
+
+/** Every surface form that identifies an entity in an answer: its per-language names + aliases. */
+function entityIndex(results, facts) {
+  const byEntity = new Map();
+  for (const r of results) {
+    const id = r.entity_id;
+    if (!byEntity.has(id)) byEntity.set(id, { id, numbers: new Set(), labels: new Set() });
+    const e = byEntity.get(id);
+    for (const n of numbersIn(r.text)) e.numbers.add(n);
+    for (const label of [r.payload?.name, ...(r.payload?.aliases ?? [])]) {
+      if (typeof label === 'string' && label.trim().length >= 2) e.labels.add(foldLabel(label));
+    }
+  }
+  // groundedFacts() describes the TOP entity only, so its numbers belong to that entity.
+  // Look the key up directly rather than testing `topId &&` — a caller may legitimately
+  // pass results with no entity_id, and `undefined` is a real key in this map.
+  const top = byEntity.get(results[0]?.entity_id);
+  if (top) for (const v of Object.values(facts)) if (v != null) for (const n of numbersIn(String(v))) top.numbers.add(n);
+  return byEntity;
+}
+
+const foldLabel = (s) => normalizeDigits(String(s)).toLowerCase().replace(/\s+/g, ' ').trim();
+
+// Split on sentence enders AND on the connectives that separate clauses of a comparison
+// ("Combo is 5,000 while Super Net is 10,000"), so each segment has one subject.
+const SEGMENT_SPLIT = /(?<=[.!?؟।\n])|(?:\s+(?:while|whereas|but|and|أما|بينما|و?لكن|بەڵام)\s+)/i;
+
+/**
+ * Numbers in `answer` that no entity supports, or that are attributed to the WRONG entity.
+ * Each segment is credited to the most recently named entity (falling back to the top
+ * result, which is what the answer is about when it names nobody).
+ * @returns {string[]} violation strings
+ */
 export function unsupportedNumbers(answer, results, facts) {
-  const allowed = allowedNumbers(results, facts);
-  return [...numbersIn(answer)].filter((n) => !allowed.has(n));
+  const byEntity = entityIndex(results, facts);
+  if (!byEntity.size) return [...numbersIn(answer)];
+
+  const entities = [...byEntity.values()];
+  const anyNumber = new Set(entities.flatMap((e) => [...e.numbers]));
+  let active = entities.find((e) => e.id === results[0]?.entity_id) ?? entities[0];
+  const violations = [];
+
+  for (const segment of String(answer).split(SEGMENT_SPLIT)) {
+    if (!segment) continue;
+    const folded = foldLabel(segment);
+    // Whichever known entity is named LAST in this segment owns the numbers after it.
+    let bestAt = -1;
+    for (const e of entities) {
+      for (const label of e.labels) {
+        const at = folded.lastIndexOf(label);
+        if (at > bestAt) { bestAt = at; active = e; }
+      }
+    }
+    for (const n of numbersIn(segment)) {
+      if (active.numbers.has(n)) continue;
+      const isWord = n.startsWith('word:');
+      const shown = isWord ? n.slice(5) : n;
+      violations.push(anyNumber.has(n)
+        // Real, but it belongs to a DIFFERENT entity — the borrowed-price case.
+        ? `misattributed_${isWord ? 'magnitude' : 'number'}: ${shown} is not a fact of ${active.id}`
+        // A plain unsupported DIGIT stays a bare string: that is the shape callers and the
+        // existing tests expect, and this is not the place to churn the contract.
+        : (isWord ? `unsupported_magnitude: ${shown}` : n));
+    }
+  }
+  return violations;
 }
 
 // Output leak-guard (docs/17 §2.4 last line): a distinctive prompt fragment in the answer
