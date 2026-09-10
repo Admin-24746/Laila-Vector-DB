@@ -68,17 +68,46 @@ function runChecks(item, { status, data }) {
   return failures;
 }
 
+// Preflight. Most items exercise /v1/answer, which is 503 `llm_not_configured` when no LLM
+// is wired up. Without this check every one of them failed the "HTTP 200" global check and
+// the suite printed 10 BLOCKING failures and "an unsafe output reached the contract surface
+// — do not ship". That claim was false: nothing unsafe was produced, the surface simply was
+// not exercised. A suite that cries wolf gets ignored, so the answer items are SKIPPED and
+// the run is reported as INCOMPLETE instead (2026-09-10).
+const health = await fetch(`${BASE}/healthz`, { headers: AUTH })
+  .then((r) => r.json())
+  .catch((err) => { console.error(`red-team: cannot reach ${BASE}/healthz — is \`npm run serve\` up? (${err.message})`); process.exit(1); });
+const llmOff = health?.llm === false;
+
 console.log(`red-team: ${items.length} adversarial items against ${BASE}\n`);
+if (llmOff) {
+  console.log('⚠ LLM not configured (healthz llm:false) — /v1/answer items CANNOT be checked.');
+  console.log('  Set LLM_BASE_URL and LLM_MODEL in .env and re-run to verify the safety surface.\n');
+}
+
 let blockingFails = 0;
 let advisoryFails = 0;
+let skipped = 0;
 
 for (const item of items) {
+  if (llmOff && item.endpoint === '/v1/answer') {
+    console.log(`⊘ ${item.id} [${item.category}] SKIPPED — no LLM configured`);
+    skipped++;
+    continue;
+  }
   let outcome;
   try {
     outcome = await post(item.endpoint, item.request);
   } catch (err) {
     console.log(`✖ ${item.id} [${item.category}] — request failed: ${err.message}`);
     blockingFails++;
+    continue;
+  }
+  // A dependency that is down did not produce an unsafe answer — it produced no answer.
+  // Report it as such rather than as a safety failure (docs/06 §7 is the 503 contract).
+  if (outcome.status === 503) {
+    console.log(`⊘ ${item.id} [${item.category}] SKIPPED — 503 ${outcome.data?.error ?? 'dependency_unavailable'}`);
+    skipped++;
     continue;
   }
   const failures = runChecks(item, outcome);
@@ -99,8 +128,16 @@ for (const item of items) {
   if (item.severity === 'advisory' || failures.length) console.log(`   ↳ ${answer}`);
 }
 
-console.log(`\nresult: ${items.length - blockingFails - advisoryFails} safe, ${advisoryFails} advisory warnings, ${blockingFails} blocking failures`);
+const checked = items.length - skipped;
+console.log(`\nresult: ${checked - blockingFails - advisoryFails}/${checked} safe, ${advisoryFails} advisory warnings, ${blockingFails} blocking failures${skipped ? `, ${skipped} skipped` : ''}`);
 if (blockingFails) {
   console.log('BLOCKING failures — an unsafe output reached the contract surface. Do not ship.');
+  process.exit(1);
+}
+if (skipped) {
+  // Still non-zero: an unverified safety surface must not read as a green run in CI.
+  // The message is deliberately different from the one above — nothing unsafe was seen.
+  console.log(`INCOMPLETE — ${skipped} item(s) were never exercised, so the safety surface is UNVERIFIED.`);
+  console.log('This is not a safety failure; configure an LLM and re-run before shipping.');
   process.exit(1);
 }

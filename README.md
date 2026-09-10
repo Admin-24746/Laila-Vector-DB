@@ -47,13 +47,58 @@ test/            unit suite (docs/23): chunker, normalizer, follow-up gate, guar
 logs/            service audit log JSONL (gitignored)
 ```
 
-## Where we left off (updated 2026-08-22)
+## Where we left off (updated 2026-09-10)
 
-**Phase 0 + Phase 1 are done and committed. A full security + correctness audit ran on
-2026-08-21 against the new laptop, and its blocking findings are FIXED** (`ab98c99`, branch
-`fix/audit-blocking-issues`, **not pushed**). `npm test` = **127 tests, 126 pass / 1 skipped /
-0 fail**; `npm audit` = **0 vulnerabilities**. The engineering backlog is no longer empty —
-see the audit section below. The content work (`content-kit/`) is still the real unblock.
+**Phase 0 + Phase 1 are done, the engineering backlog is EMPTY, and the stack is running on
+this laptop.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
+`ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
+regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues`,
+**not pushed**. `npm test` = **145 tests, 145 pass / 0 fail** (the integration test no longer
+skips — Qdrant is live). `npm audit` = **0 vulnerabilities** after a fresh `npm audit fix` on
+2026-09-10: new `fast-uri` SSRF/host-confusion advisories and a `fastify` schema-validation
+bypass had landed since August, so **fastify is now 5.12.3** (re-verified: full suite green,
+endpoints unchanged). **The content work (`content-kit/`) is now the only thing left.**
+
+### ▶ Bringing it up on this laptop (verified working 2026-09-10)
+
+```bash
+./qdrant_bin/qdrant.exe          # native; do NOT `docker compose up qdrant` — different DB
+docker compose up -d tei         # TEI only; model is already cached, healthy in ~20s
+npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 10 entities, 129 chunks, ~35s
+node src/service/server.js       # NOT `npm run serve` — a task-stop orphans the node child
+curl http://127.0.0.1:8090/healthz
+```
+
+Measured on this machine: TEI answers a single embed in **~140 ms** (not the 1–3/sec the old
+notes feared), full ingest **34.5 s**, `/healthz` = `{qdrant:true, tei:true, llm:false,
+points:129}`, banner = `auth on, draft content VISIBLE, LLM off`. Sandbox console at
+`GET http://127.0.0.1:8090/`. Eval reproduces the documented numbers exactly: Hit@5 **96.6%**
+overall / **100%** Kurdish, routing **28.6%**, false-route **0.0%**; the sweep still tops out
+at **78.6%** under the false-route gate (τ_high 0.50 / margin 0.05).
+
+Config changes this required. ⚠️ **`.env` is gitignored, so its two changes live only on this
+machine** — they are documented in the tracked `.env.example`, and anyone setting up a fresh
+box has to reapply them. The `docker-compose.yml` change *is* committed.
+
+- **`.env`: `EMBED_TIMEOUT_MS=30000`** (local) — the 10 s default is a GPU-era number.
+- **`.env`: `LLM_BASE_URL` and `LLM_MODEL` blanked** (local). Ollama is not installed here, and
+  `llmConfigured()` only checks that the strings are non-empty — so leaving them set made
+  `/v1/answer` return **HTTP 200 with the safe fallback for every question**. Blank now gives
+  an honest `503 llm_not_configured`. Restore them when an LLM exists.
+- **`docker-compose.yml`: `--max-client-batch-size 32`, `--max-batch-tokens 4096`, `mem_limit:
+  6g`.** ⚠️ The old notes said to use `16`, but **`embedder.js` sends batches of 24** — 16 kills
+  ingestion with `422 batch size 24 > maximum allowed batch size 16`. Keep this ≥ `BATCH_SIZE`.
+- **`npm run ingest:rebuild` is mandatory on first bring-up**, both because
+  `.ingest-state.json` came from the old machine and because `9d4e62b` changed the hash format.
+
+`npm run redteam` reports **1/1 safe, 14 skipped, INCOMPLETE** — the adversarial items all hit
+`/v1/answer`, which needs an LLM. (It used to print those 14 as *blocking failures* with
+"an unsafe output reached the contract surface"; that was false — nothing unsafe was produced,
+the surface simply wasn't exercised. Fixed to skip and report INCOMPLETE, still exit 1.)
+
+**Thresholds were deliberately NOT recalibrated.** The sweep's 78.6% is measured against the
+synthetic seed, so committing τ_high=0.50 would bake a placeholder-derived number into `.env`.
+Recalibrate *after* real utterances land — that ordering is the whole point of the sweep.
 
 > ⚠️ **`HANDOVER.md` and `docs/29` describe a DIFFERENT, DEAD implementation** (`src/*.js`,
 > port 7100, `content/entities/`). Commit `bd84b2e` merged that older tree back into this
@@ -92,7 +137,10 @@ Full report (reproductions for every claim):
    `HOST=0.0.0.0` to make it reachable. Startup now refuses that combination, warns on
    loopback, and the banner states `auth on|OFF` and whether draft content is visible.
 
-**Found and verified, NOT yet fixed** (second review pass, 2026-08-22):
+**Found in the second review pass (2026-08-22) — ALL NINE FIXED in `9d4e62b` (2026-09-10).**
+Each is pinned by a regression test in `test/audit-round2.test.js`; the pins were verified by
+reverting each behaviour while keeping the export surface, and every one of them fails without
+its fix. Kept here as the record of what was wrong and why it mattered:
 
 | # | Issue | Where | Why it matters |
 |---|-------|-------|----------------|
@@ -201,15 +249,17 @@ Also in this session:
 
 ### ⏭ Next session — pick up here
 
-1. **Config coercion + the eval false-route metric** (audit items 1 and 2 above). Both are
-   small and mechanical, and each currently invalidates a stated safety guarantee.
-2. **Type-check langmap values** (item 3) plus the trivial text/ordering fixes (6–8). One pass.
-3. **The two design calls**: the per-entity number guardrail, and retiring the legacy tree.
-4. **Then the content work — still the real unblock:** work through
+Items 1–9 and the stack bring-up are **done** (`9d4e62b`). What is left:
+
+1. **The content work — now the ONLY thing blocking the routing gate:** work through
    [`content-kit/`](content-kit/README.md) → re-ingest → re-eval → `npm run eval -- --sweep` →
    update `ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That is what pushes routing accuracy past
    the 0.85 gate (28.6% at conservative defaults — data-limited by the synthetic seed, not the
    architecture: 29 of the 42 gold items are knowledge questions labelled `knowledge_flow`).
+2. **The two design calls** (unchanged, see "Still open by design decision" above): the
+   per-entity number guardrail, and retiring the legacy `src/*.js` tree.
+3. **An LLM for `/v1/answer`.** Until one is configured the endpoint honestly 503s and
+   `npm run redteam` can only check 1 of its 15 items — the safety surface is UNVERIFIED.
 
 **Open decisions for Yousif** (docs/23 §6): node:test vs Vitest; confirm GitHub Actions as CI
 runner (assumed); blocking vs advisory gates in alpha.
@@ -217,27 +267,44 @@ runner (assumed); blocking vs advisory gates in alpha.
 #### Stack state — THIS MACHINE (HP EliteBook 830 G7, since 2026-08)
 
 The project was built on an Acer Predator with an **RTX 5060**. This laptop is
-**i5-10310U, 4c/8t, Intel UHD graphics — no CUDA**, 15.8 GB RAM, C: ~10 GB free / D: ~110 GB.
-Nothing is running; the stack has never been brought up here.
+**i5-10310U, 4c/8t, Intel UHD graphics — no CUDA**, 15.8 GB RAM, C: ~27 GB free / D: ~104 GB.
+**The stack was brought up and verified here on 2026-09-10** — the recipe and measured numbers
+are in "Bringing it up on this laptop" near the top. What is still true, plus corrections:
 
 - **Qdrant needs no Docker.** `qdrant_bin\qdrant.exe` (v1.18.2, official release) runs natively
-  and passes the full integration suite. Note it writes to `.\qdrant_storage\`, while
-  `docker-compose.yml` mounts a *named volume* — **they are different databases.**
-- **TEI must stay on CPU.** `docker-compose.yml` already defaults to `cpu-latest`; do **not**
-  uncomment the GPU block. Lower `--max-batch-tokens` to `4096` and `--max-client-batch-size`
-  to `16`, and add `mem_limit: 6g` (the `~/.wslconfig` comment already assumes limits exist).
-- **`npm run ingest` will write 0 chunks and exit 0.** `.ingest-state.json` came over from the
-  old machine and matches all 10 seed files, while this machine's collection is empty.
-  **Use `npm run ingest:rebuild` on first bring-up.**
-- **Ollama is not installed**, but `.env` still points at `localhost:11434`. `llmConfigured()`
-  only checks that the env strings are non-empty, so `/v1/answer` returns **HTTP 200 with the
-  safe-fallback answer for every question** instead of an honest 503. Blank `LLM_BASE_URL` and
-  `LLM_MODEL` until an LLM exists, or point them at a hosted OpenAI-compatible endpoint.
-- **Raise `EMBED_TIMEOUT_MS` to `30000`** — the 10 s default is a GPU-era number; BGE-M3 on this
-  CPU runs ~1–3 embeddings/second.
-- **Docker's disk image is still on C:.** Moving it needs the GUI: Docker Desktop → Settings →
-  Resources → Advanced → Disk image location → `D:\DockerData`. The `DataFolder` key is already
-  set in `settings-store.json` (Docker stores it but ignores it at startup).
+  and passes the full integration suite. Start TEI alone (`docker compose up -d tei`) so the
+  compose Qdrant never races the native one on :6333.
+- ⚠️ **Correction — there are THREE Qdrant databases in play, and the old note named the wrong
+  one.** Launched from the repo root, `qdrant.exe` writes to its default `.\storage\` — **not**
+  `.\qdrant_storage\`. `storage/` is the live DB (129 points, verified 2026-09-10) and is now
+  gitignored. **`qdrant_storage/` is a stale 2026-08-11 database that is COMMITTED TO GIT** and
+  is read by nothing; it also holds a `laila_knowledge` collection, so it is easy to mistake for
+  the real one. `docker-compose.yml` mounts a third, a *named volume*. **Decision needed: delete
+  the tracked `qdrant_storage/` from the repo** — nothing reads it, and it will keep misleading.
+- **TEI must stay on CPU.** `docker-compose.yml` defaults to `cpu-latest`; do **not** uncomment
+  the GPU block. `--max-batch-tokens 4096` and `mem_limit: 6g` are now committed there.
+  ⚠️ **Correction:** the earlier advice to set `--max-client-batch-size 16` was **wrong** —
+  `embedder.js` sends batches of **24**, so 16 kills ingestion with
+  `422 batch size 24 > maximum allowed batch size 16`. It is committed as **32**; keep it
+  ≥ `BATCH_SIZE` in `src/lib/embedder.js`.
+- **`npm run ingest` will write 0 chunks and exit 0** on a fresh machine — `.ingest-state.json`
+  came from the old laptop. **Use `npm run ingest:rebuild` on first bring-up.** (`9d4e62b` also
+  changed the hash format, so the first run after it re-embeds everything regardless.)
+- **Ollama is not installed.** `LLM_BASE_URL`/`LLM_MODEL` are **blanked in `.env`** (local,
+  gitignored) so
+  `/v1/answer` returns an honest `503 llm_not_configured` instead of HTTP 200 with the safe
+  fallback for every question. Restore them, or point at a hosted OpenAI-compatible endpoint,
+  when an LLM exists — `npm run redteam` cannot check 14 of its 15 items until then.
+- **`EMBED_TIMEOUT_MS=30000` is set in `.env`** — which is **gitignored**, so this does not
+  travel; `.env.example` carries the note instead. ⚠️ **Correction:** the "~1–3
+  embeddings/second" figure was pessimistic — measured here, TEI returns a single embed in
+  **~140 ms** and ingests 129 chunks in **34.5 s**. The raised ceiling is cheap insurance;
+  it is not the bottleneck it was expected to be.
+- **Docker's disk image is still on C:** (27 GB free, so not urgent). Moving it needs the GUI:
+  Docker Desktop → Settings → Resources → Advanced → Disk image location → `D:\DockerData`.
+  The `DataFolder` key is already set in `settings-store.json` (Docker stores it but ignores
+  it at startup). Docker Desktop is not set to start with Windows — launch it before
+  `docker compose up`; the daemon takes ~10 s to accept connections.
 
 Testing gotchas: PowerShell mangles Arabic in HTTP bodies — always test via Node scripts;
 killing `npm run serve` via a task-stop orphans the node child — kill the :8090 PID instead;

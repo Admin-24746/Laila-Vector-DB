@@ -20,7 +20,13 @@ services:
     image: ghcr.io/huggingface/text-embeddings-inference:cpu-latest
     container_name: laila-tei
     restart: unless-stopped
-    command: --model-id BAAI/bge-m3 --max-client-batch-size 64 --max-batch-tokens 16384
+    # Batch sizes are sized for the i5-10310U dev laptop (4c/8t, no CUDA, 15.8GB RAM):
+    # the GPU-era 16384/64 makes a CPU batch take minutes and pushes the container past
+    # the WSL memory budget. Raise them again on a GPU host.
+    # --max-client-batch-size MUST be >= embedder.js BATCH_SIZE (24), or ingestion dies on
+    # a 422 "batch size 24 > maximum allowed batch size 16". Verified 2026-09-10.
+    command: --model-id BAAI/bge-m3 --max-client-batch-size 32 --max-batch-tokens 4096
+    mem_limit: 6g
     ports:
       - "8080:80"
     volumes:
