@@ -53,7 +53,7 @@ logs/            service audit log JSONL (gitignored)
 this laptop.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
 `ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
 regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues`,
-**not pushed**. `npm test` = **139 tests, 139 pass / 0 fail** (the integration test no longer
+**not pushed**. `npm test` = **151 tests, 151 pass / 0 fail** (the integration test no longer
 skips — Qdrant is live; the count fell from 150 because the legacy tree's four test files went
 with it, replaced by `test/lib-primitives.test.js`). `npm audit` = **0 vulnerabilities** after a fresh `npm audit fix` on
 2026-09-10: new `fast-uri` SSRF/host-confusion advisories and a `fastify` schema-validation
@@ -313,8 +313,59 @@ Items 1–9 and the stack bring-up are **done** (`9d4e62b`). What is left:
    update `ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That is what pushes routing accuracy past
    the 0.85 gate (28.6% at conservative defaults — data-limited by the synthetic seed, not the
    architecture: 29 of the 42 gold items are knowledge questions labelled `knowledge_flow`).
-2. **The two design calls** (unchanged, see "Still open by design decision" above): the
-   per-entity number guardrail, and retiring the legacy `src/*.js` tree.
+
+   **The mechanical half is now scripted** (2026-09-10) — all that is missing is the export:
+
+   ```bash
+   npm run logs:extract -- <export> --inspect   # sniff the format/columns, write nothing
+   npm run logs:extract -- <export>             # → content-kit/utterances-<date>.csv
+   #   ... a human fills in intent_id ...
+   npm run utterances:import -- <csv> --dry-run # report the 80/20 split
+   npm run utterances:import -- <csv>           # write seed intents + gold items
+   ```
+
+   Stage 1 (`scripts/logs-to-utterances.mjs`) takes CSV / JSONL / a JSON array / a
+   `{"value":[…]}` envelope, works out the text, session, role and time columns, keeps the
+   first customer turn per conversation, drops bot turns, dedupes with a `seen 12x` note,
+   **redacts MSISDNs and emails**, and labels language/script with the service's own detector.
+   Stage 2 (`scripts/utterances-to-seed.mjs`) validates against `data/vocab/flows.json` and
+   does the **hash-based** 80/20 split — hash-based so adding utterances later never reshuffles
+   which rows are held out, keeping eval numbers comparable run to run.
+   `intent_id` is deliberately left blank for a human: the kit is explicit that copying the old
+   dispatcher's decisions would teach the new router the old "loan → BTL" bug.
+   Logic lives in `src/lib/logmine.js` + `src/lib/csv.js`, pinned by `test/logmine.test.js`.
+   ### 📦 Relevant data ALREADY on this machine (surveyed 2026-09-10)
+
+   Nothing of this is wired in — it is a pointer, not a claim that it is usable as-is.
+
+   - **`D:\Projects\DevOpsebra\FEBRA PROJECT\`** — ~73 REAL bundles with real
+     `BundleID`, price, validity, description and genuine subscription methods ("send 1 to
+     230, or dial `*230#`"), as `bundles_{ATL,Line,Yooz}_FEBRA_En.{csv,json}` plus Arabic and
+     Kurdish variants and two `.xlsx`. This is the **seed-20 workstream's actual source** —
+     `data/seed/` currently holds 3 bundles with invented prices and shortcodes.
+     ⚠️ Caveats before trusting it: the ATL CSV has a **quoting bug** (row 1's `Validity`
+     contains `"), Show Bundle Pocket Roaming, Stop Premium SMS, Purchase Validity"` — a
+     mis-escaped export), the `Line` rows have **empty `BundleID`**, and the ar/ku files are
+     **JavaScript bot-flow source** with the text embedded, not data files. It needs a parser
+     and a human pass, not a straight import.
+   - **`D:\Projects\DevOps\Reportgent_transfers.csv`** — real per-flow transfer volumes
+     (`Issue handler - New Miran` 21,077 · `line-agent` 12,157 · `Agent Dispatch - rephrase
+     and categorize` 7,480 · `Error-Handler-Flow` 5,934 · `Balance GPT new` 3,117 ·
+     `loan-agent` 1,651 …). Directly useful for the `vocab-confirm.md` **§Flows** CONFIRM and
+     for prioritising which intents to mine first. Note these count *hand-offs to a human*,
+     so they measure where the bot gives up, not total traffic.
+   - **`Report/reference/events sample (portal export).csv`** — checked and **NOT useful for
+     utterances**: `message` is the bot's canned Arabic failure line, and `request`/`response`
+     are API telemetry. No customer text anywhere in it.
+
+   So the **bundle** half of the content work may be much closer than assumed; the
+   **utterance** half still needs a log export that does not exist on this machine.
+
+2. ~~**The two design calls.**~~ ✅ Both closed 2026-09-10 in `7817ecd` — the number guardrail
+   is bound per entity and the legacy `src/*.js` tree is gone. See the audit section above.
+   The one leftover is a data question, not a code one: **`content/`** still holds
+   hand-authored entity data that only the deleted tree read. Migrate what is useful into
+   `data/seed/`, then delete it.
 3. ~~**An LLM for `/v1/answer`.**~~ ✅ Done 2026-09-10 — Ollama + qwen2.5:3b-instruct, red-team
    15/15. What remains here is a **model** decision, not a setup one: the 3B model is slow
    (~9 tok/s → 18–38 s per answer) and its Arabic is rough. Decide whether alpha ships on a

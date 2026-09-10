@@ -13,6 +13,38 @@ things. Real log utterances are the single highest-leverage routing fix.
 - Last resort: ask 3–4 colleagues to phrase each intent naturally in their dialect — better than
   nothing, mark `source` = `colleague`.
 
+## ▶ There is now a script for the boring half (added 2026-09-10)
+
+You do not have to hand-transcribe the export. Point stage 1 at whatever the log system gives
+you — CSV, JSONL, a JSON array, or a `{"value": [...]}` envelope — and it works out the shape,
+the columns, and who spoke:
+
+```bash
+npm run logs:extract -- <export-file> --inspect     # show what it detected, write nothing
+npm run logs:extract -- <export-file>               # → content-kit/utterances-<date>.csv
+```
+
+It keeps the **first customer turn per conversation** (see below for why), drops bot turns,
+dedupes (noting `seen 12x` so you can see what is common), **redacts phone numbers and
+emails**, and fills in `language`/`script` using the service's own detector. If it guesses a
+column wrong: `--text-col`, `--session-col`, `--role-col`, `--customer-role`. `--all-turns`
+keeps every customer message, not just the first.
+
+**`intent_id` is left blank on purpose.** That is the one step a script must not do — see the
+`intent_id` row in the table below.
+
+Once you have labelled it, stage 2 does the 80/20 split and writes the seed files:
+
+```bash
+npm run utterances:import -- content-kit/utterances-<date>.csv --dry-run   # report only
+npm run utterances:import -- content-kit/utterances-<date>.csv             # apply
+```
+
+It refuses to run if a language is unknown, a `target_flow` is not in `data/vocab/flows.json`,
+or one intent is labelled with two different flows. It warns when an intent has fewer than 10
+rows, when an intent ends up with no held-out rows (nothing would measure it), and when you
+are about to create a new intent that looks like a duplicate of an existing one.
+
 ## Format — fill `utterances-template.csv`
 
 One row per utterance. UTF-8, comma-separated, quote any field containing a comma.
@@ -45,11 +77,16 @@ can see the shape — delete them before submitting.
 
 ## What happens with the file
 
-1. Rows are split ~80/20: 80% → `examples` in `data/seed/intents/intent_*.json` (router training
-   examples), 20% held out → `eval/gold/gold.jsonl` items (so we never test on the router's own
-   examples).
-2. `npm run ingest` → `npm run eval -- --sweep` → recalibrate `ROUTE_TAU_HIGH`/`ROUTE_MARGIN`.
-   This is the step expected to push routing accuracy past the 0.85 prototype gate.
+1. `npm run utterances:import` splits the rows ~80/20: 80% → `examples` in
+   `data/seed/intents/intent_*.json` (router training examples), 20% held out →
+   `eval/gold/gold.jsonl` (so we never test the router on its own examples).
+   The split is **hash-based, not random**: adding another 200 utterances later leaves every
+   existing row on the side it was already on, so eval numbers stay comparable between runs.
+   By default real utterances **replace** the invented placeholder examples — that is the
+   point of the exercise. Pass `--merge` to add to them instead.
+2. `npm run ingest` → `npm run eval` → `npm run eval -- --sweep` → set `ROUTE_TAU_HIGH` /
+   `ROUTE_MARGIN` in `.env`. This is the step expected to push routing accuracy past the 0.85
+   prototype gate.
 
 ## Time estimate
 

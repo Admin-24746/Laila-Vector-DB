@@ -12,6 +12,8 @@
     "ingest": "node src/ingest/run.js",
     "ingest:rebuild": "node src/ingest/run.js --rebuild",
     "ingest:dry": "node src/ingest/run.js --dry-run",
+    "logs:extract": "node scripts/logs-to-utterances.mjs",
+    "utterances:import": "node scripts/utterances-to-seed.mjs",
     "serve": "node src/service/server.js",
     "eval": "node src/eval/run.js",
     "eval:sweep": "node src/eval/run.js --sweep",
