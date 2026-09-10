@@ -71,6 +71,12 @@ export const CONFIG = {
     // Optional separate model for the docs/12 follow-up rewrite call only (probed:
     // small models garble Iraqi-Arabic rewrites; a bigger one may pass the anchor guard).
     rewriteModel: process.env.LLM_REWRITE_MODEL || null,
+    // Generation ceilings, ms. Sized for a hosted endpoint; a local model on CPU is far
+    // slower and needs these raised or every answer times out into the safe fallback.
+    // Measured 2026-09-10 on this laptop: qwen2.5:3b-instruct via Ollama runs ~9 tok/s,
+    // so a 900-token answer alone is ~100 s before prompt-eval and model load.
+    timeoutMs: num('LLM_TIMEOUT_MS', 60_000),
+    rewriteTimeoutMs: num('LLM_REWRITE_TIMEOUT_MS', 15_000),
     // Qwen3-style thinking models burn the token budget inside <think> and return nothing.
     // "/no_think" is Qwen's soft switch; harmless plain text if sent to other models.
     noThink: process.env.LLM_NO_THINK != null

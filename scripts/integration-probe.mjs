@@ -1,13 +1,18 @@
 // Query probe for test/integration.qdrant.test.js.
 //
+// It lives in scripts/ rather than test/ ON PURPOSE: `node --test` collects EVERY .mjs/.js
+// under a test/ directory, so while it sat in test/helpers/ the runner executed it as a
+// test file — firing real queries at the LIVE collection and printing raw JSON into the
+// runner's output stream. Do not move it back.
+//
 // It runs as a CHILD PROCESS because the whole pipeline reads CONFIG at module-import time
 // (collection name, URLs, timeouts), so pointing it at a throwaway collection means setting
 // the environment before import — which an in-process test cannot do after the fact.
 // Prints one JSON object on stdout; the parent asserts on it.
 
-import { retrieve } from '../../src/service/retrieve.js';
-import { routeMessage } from '../../src/service/route.js';
-import { countPoints } from '../../src/lib/qdrant.js';
+import { retrieve } from '../src/service/retrieve.js';
+import { routeMessage } from '../src/service/route.js';
+import { countPoints } from '../src/lib/qdrant.js';
 
 const ids = (rs) => rs.map((r) => r.entity_id);
 

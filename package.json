@@ -8,7 +8,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test",
+    "test": "node --test --test-concurrency=2",
     "ingest": "node src/ingest/run.js",
     "ingest:rebuild": "node src/ingest/run.js --rebuild",
     "ingest:dry": "node src/ingest/run.js --dry-run",
@@ -19,7 +19,8 @@
     "sanity:kurdish": "node scripts/sanity-kurdish.js",
     "redteam": "node scripts/red-team.js",
     "stack:up": "docker compose up -d",
-    "stack:down": "docker compose down"
+    "stack:down": "docker compose down",
+    "test:serial": "node --test --test-concurrency=1"
   },
   "dependencies": {
     "@qdrant/js-client-rest": "^1.15.0",

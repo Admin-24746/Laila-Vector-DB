@@ -115,6 +115,18 @@ export function unsupportedNumbers(answer, results, facts) {
 // Output leak-guard (docs/17 §2.4 last line): a distinctive prompt fragment in the answer
 // means the model is echoing its instructions (extraction/jailbreak got through the
 // hardened prompt). Deterministic — never trusts the model to police itself.
+// Script sanity. None of the four supported languages uses CJK, so a CJK character means
+// the small model drifted mid-sentence — observed 2026-09-10, an Arabic answer containing
+// "بال不满意". `understand.js` already rejects CJK in a rewrite; the answer path had no
+// equivalent guard, so the garbled text went straight to the customer. Latin is NOT flagged:
+// brand names and shortcodes ("Asiacell", "Super Net", "NET10") are legitimately Latin in an
+// Arabic answer, so the docs/21 native review judges that, not a regex.
+const CJK = /[぀-ヿ㐀-䶿一-鿿豈-﫿]/;
+
+export function scriptViolations(answer) {
+  return CJK.test(answer) ? ['script_drift: CJK characters in a non-CJK answer'] : [];
+}
+
 export function promptLeakViolations(answer) {
   return PROMPT_LEAK_MARKERS
     .filter((m) => answer.includes(m))
@@ -160,7 +172,7 @@ export async function composeAnswer({ question, results, facts, language }) {
   const problems = (a) => {
     if (typeof a !== 'string') return [`llm_error: ${a.error}`];
     if (!a.trim()) return ['empty_answer'];
-    return [...unsupportedNumbers(a, results, facts), ...promptLeakViolations(a)];
+    return [...unsupportedNumbers(a, results, facts), ...promptLeakViolations(a), ...scriptViolations(a)];
   };
 
   let answer = await attempt(system, { temperature: 0.2 });

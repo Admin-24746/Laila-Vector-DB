@@ -4,7 +4,7 @@
 // touch the LLM.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { unsupportedNumbers, promptLeakViolations, composeAnswer } from '../src/service/answer.js';
+import { unsupportedNumbers, promptLeakViolations, scriptViolations, composeAnswer } from '../src/service/answer.js';
 import { NOT_FOUND, ANSWER_SYSTEM, PROMPT_LEAK_MARKERS } from '../src/service/prompts.js';
 
 const results = [
@@ -144,5 +144,28 @@ test('ordinary words are not mistaken for magnitudes (precision)', () => {
     'This is the first step.',
   ]) {
     assert.deepEqual(unsupportedNumbers(clean, evidence, {}), [], `must not fire on: ${clean}`);
+  }
+});
+
+// ── script-drift guard (observed 2026-09-10) ─────────────────────────────────
+// The 3B model spliced Chinese into an Arabic answer ("أعتذر إن كنت تشعر بال不满意").
+// None of the four supported languages uses CJK, so that is unambiguously broken output;
+// understand.js already rejected it in a rewrite, the answer path did not.
+test('CJK characters in an answer are a guardrail violation', () => {
+  assert.deepEqual(scriptViolations('The Combo Bundle costs 5,000 IQD.'), []);
+  assert.deepEqual(scriptViolations('باقة كومبو بـ 5,000 دينار.'), []);
+  assert.deepEqual(scriptViolations('Pakêja Combo 5000 IQD e.'), []);
+
+  assert.equal(scriptViolations('أعتذر إن كنت تشعر بال不满意').length, 1, 'the observed failure');
+  assert.match(scriptViolations('答案 is 5000').at(0), /^script_drift:/);
+});
+
+test('script guard does not fire on legitimate Latin inside Arabic', () => {
+  // Brand names and shortcodes are Latin by design — flagging them would blank real answers.
+  for (const ok of [
+    'باقة Super Net بـ 10,000 دينار.',
+    'أرسل NET10 إلى 1234 للاشتراك بخدمة Asiacell.',
+  ]) {
+    assert.deepEqual(scriptViolations(ok), [], `must not fire on: ${ok}`);
   }
 });

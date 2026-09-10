@@ -58,7 +58,7 @@ test('end-to-end: ingest → hybrid retrieval → filters → routing', { skip }
     });
 
     // One child process answers every query, so the stack is paid for once.
-    const probe = JSON.parse(run(['test/helpers/integration-probe.mjs']));
+    const probe = JSON.parse(run(['scripts/integration-probe.mjs']));
 
     await t.test('every chunk written is queryable', () => {
       const claimed = Number(ingestOut.match(/collection now holds (\d+) points/)[1]);

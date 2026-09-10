@@ -134,7 +134,7 @@ async function rewriteFollowUp(text, history, language) {
   const out = await chat([
     { role: 'system', content: rewritePrompt(language) },
     { role: 'user', content: `Conversation:\n${turns}\n\nFollow-up message: ${text}` },
-  ], { temperature: 0, maxTokens: 400, timeoutMs: 15_000, model: CONFIG.llm.rewriteModel ?? undefined });
+  ], { temperature: 0, maxTokens: 400, timeoutMs: CONFIG.llm.rewriteTimeoutMs, model: CONFIG.llm.rewriteModel ?? undefined });
   const q = extractJson(out)?.standalone_query;
   if (typeof q !== 'string') return null;
   const clean = q.trim();
