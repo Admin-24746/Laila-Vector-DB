@@ -70,6 +70,28 @@ August, so **fastify is now 5.12.3** (re-verified: full suite green, endpoints u
 **What remains of the content work is the half that needs a human: the log export, and the
 facts the FEBRA export does not carry.**
 
+> [!IMPORTANT]
+> ⛔ **Production mode currently serves NOTHING, and that is by design.** `NODE_ENV=production`
+> (or `EXCLUDE_DRAFT=1`) hides every `status: draft` entity, and **nothing in the repo is
+> `verified`** — measured 2026-09-12: `EXCLUDE_DRAFT=1` → **0 chunks**, `EXCLUDE_DRAFT=0` →
+> 5 chunks. It is the 2026-08-21 audit fix working (unconfirmed prices must not reach
+> customers), but it means the deployment gate is **human verification, not code**: entities
+> must be checked and moved to `status: "verified"` before production answers anything.
+> (The flag takes `1`/`0` — `EXCLUDE_DRAFT=true` silently means *show* draft.)
+
+### 🧪 Testing it yourself
+
+`npm run probe` — a ~5 s pass/fail smoke test over real customer questions **including the
+ones the service must refuse**, plus a standing check that no retired placeholder resurfaces.
+`npm run probe -- --answers` adds the LLM path (~3-4 min). Currently **all checks pass**.
+Copy-paste questions, expected facts, the authoring loop and the other dimensions worth
+exercising are in [`vault/Testing it yourself.md`](vault/Testing%20it%20yourself.md).
+
+The authoring loop is verified end to end: add one entity → `npm run ingest` is **4.8 s**
+(vs 132 s for a full rebuild) → retrievable in en/ar/ckb immediately with correct
+`grounded_facts`; delete the file → `npm run ingest` is **0.1 s** and it is gone. Location
+filtering was confirmed the same way (a `basra`-only fixture is absent for `baghdad`).
+
 ### 🔬 What an end-to-end usefulness probe found, and the four fixes (2026-09-12)
 
 48 retrieval probes, 15 answer probes and 6 routing probes against real customer phrasings,
