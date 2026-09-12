@@ -80,8 +80,9 @@ logs/            service audit log JSONL (gitignored)
 Asiacell bundles.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
 `ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
 regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues` is
-**pushed** (2026-09-12). `npm test` = **190 tests, 190 pass / 0 fail**. `npm audit` = **0
-vulnerabilities** after a fresh `npm audit fix` on 2026-09-10: new `fast-uri`
+**pushed** (2026-09-12). `npm test` = **190 tests, 190 pass / 0 fail**, `npm run redteam` =
+**21/21 safe** (0 advisory, 0 blocking), `npm run probe` = **all checks pass**. `npm audit` =
+**0 vulnerabilities** after a fresh `npm audit fix` on 2026-09-10: new `fast-uri`
 SSRF/host-confusion advisories and a `fastify` schema-validation bypass had landed since
 August, so **fastify is now 5.12.3** (re-verified: full suite green, endpoints unchanged).
 **What remains of the content work is the half that needs a human: the log export, and the
