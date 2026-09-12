@@ -38,6 +38,8 @@ data/seed/       entity JSONs (one file per entity; _TEMPLATE.* to author new on
 data/vocab/      controlled vocabularies (docs/26) — placeholders to CONFIRM
 src/lib/         chunker (docs/03), embedder (docs/04), qdrant (docs/05), validate (docs/25)…
 src/ingest/      pipeline CLI (docs/07): incremental, hash-based, idempotent
+scripts/         content pipelines: febra-to-seed (bundles), logs-to-utterances +
+                 utterances-to-seed (routing), probes and red-team runners
 src/service/     retrieve() engine (docs/06) + REST server (docs/08) + safety filter (docs/17)
 src/eval/        eval harness (docs/09): Hit@k/MRR per language, routing confusion, τ sweep
 eval/gold/       gold test set (JSONL) — starter items incl. Kurdish slice
@@ -47,36 +49,88 @@ test/            unit suite (docs/23): chunker, normalizer, follow-up gate, guar
 logs/            service audit log JSONL (gitignored)
 ```
 
-## Where we left off (updated 2026-09-10)
+## Where we left off (updated 2026-09-12)
 
-**Phase 0 + Phase 1 are done, the engineering backlog is EMPTY, and the stack is running on
-this laptop.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
+**Phase 0 + Phase 1 are done, the engineering backlog is EMPTY, and the index now holds real
+Asiacell bundles.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
 `ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
-regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues`,
-**not pushed**. `npm test` = **151 tests, 151 pass / 0 fail** (the integration test no longer
-skips — Qdrant is live; the count fell from 150 because the legacy tree's four test files went
-with it, replaced by `test/lib-primitives.test.js`). `npm audit` = **0 vulnerabilities** after a fresh `npm audit fix` on
-2026-09-10: new `fast-uri` SSRF/host-confusion advisories and a `fastify` schema-validation
-bypass had landed since August, so **fastify is now 5.12.3** (re-verified: full suite green,
-endpoints unchanged). **The content work (`content-kit/`) is now the only thing left.**
+regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues` is
+**pushed** (2026-09-12). `npm test` = **170 tests, 170 pass / 0 fail**. `npm audit` = **0
+vulnerabilities** after a fresh `npm audit fix` on 2026-09-10: new `fast-uri`
+SSRF/host-confusion advisories and a `fastify` schema-validation bypass had landed since
+August, so **fastify is now 5.12.3** (re-verified: full suite green, endpoints unchanged).
+**What remains of the content work is the half that needs a human: the log export, and the
+facts the FEBRA export does not carry.**
 
-### ▶ Bringing it up on this laptop (verified working 2026-09-10)
+### 📥 The seed is real now — 50 bundles imported from FEBRA (2026-09-12)
+
+`npm run bundles:import` turns the FEBRA product export into `data/seed/bundles/*.json`.
+**50 of its 73 rows imported** (29 ATL + 21 Yooz); the index went from 10 entities / 129
+chunks to **60 entities / 300 chunks**, and retrieval held: Hit@5 **96.6%** overall and
+**100%** Kurdish against a corpus six times larger. Every imported entity is `status:
+"draft"` and carries a `review_note` saying what is still missing.
+
+It is an import **with a gate**, not a copy. A row becomes an entity only when its identity
+and every required number can be *read* from the export — the worksheet's rule is that a
+number is real or blank, never estimated — so **23 rows did not import**, each with its
+reason in [`content-kit/febra-import-report.md`](content-kit/febra-import-report.md):
+
+- **12 Line/RED rows have no `bundleId`.** Identity is the numeric id, never the display
+  name (docs/27 §4). Ironically these are the only rows carrying **real subscription steps**
+  ("send 1 to 230, or dial `*230#`") — worth harvesting by hand.
+- **Two ids are each claimed by two different products** (1013 = Iran *and* UAE roaming
+  daily; 1012 likewise weekly). Importing either would answer a question about one country
+  with the other's facts, so neither side imports.
+- **Nine roaming rows are structurally broken** — empty names, or one row that is bot-flow
+  instruction text listing six countries' packages under a single id and price.
+- **`bundle_1025` (Daily Free Social 300 MB)** is the row whose `validity` cell was mangled
+  by the export, and no translation states its duration either. Its name says "Daily", but a
+  name is not a stated validity — it needs a BSS lookup.
+
+Four things the parser deliberately refuses to do, each pinned by a test in
+`test/febra.test.js`:
+
+- **No invented `how_to`.** The ATL/Yooz export carries no subscription steps at all, and
+  inventing a `*123#` is precisely how the placeholder seed went wrong. The imported
+  entities have **no subscribe/unsubscribe chunks** — that is the largest single gap.
+- **An unlimited bundle's GB figure is the FUP threshold, not an allowance.** "Unlimited
+  Internet for 24 hours … FUP applied after using (3GB)" imports with `data_mb` **blank**;
+  storing 3 GB would answer "how much data do I get?" with a cap the customer does not have.
+- **No machine translation.** `ar` and `ckb` names/copy are the export's own per-language
+  prompt text, keyed by BundleID. **`kmr` (Badini) is absent from the export entirely** and
+  was left blank — hence 50 `names missing required languages: kmr` warnings on ingest.
+- **No minutes/SMS split.** The source says "500 mins , 500 SMS To all networks", which does
+  not map onto `minutes_onnet`/`minutes_offnet`. Left blank; the figures survive in the
+  description text, which is what actually gets embedded.
+
+⚠️ **The invented placeholders are still there.** `bundle_1601/1602/1603`, `service_shukran`
+and `terminology_line` were left alone because the gold set and `conflicts_with` point at
+them — removing them is a separate, deliberate step that has to move the eval with it.
+⚠️ **Aliases are empty on all 50.** A live probe for *"شكد سعر باقة يووز 25 مكس؟"* matched the
+**English** `Yooz 25 Mix` chunk, because the Arabic name in the export is the semantic
+"متوازن – يووز 25,000" and nothing links the two. Aliases come from real logs, not invention.
+
+### ▶ Bringing it up on this laptop (re-verified 2026-09-12)
 
 ```bash
 ./qdrant_bin/qdrant.exe          # native; do NOT `docker compose up qdrant` — different DB
 docker compose up -d tei         # TEI only; model is already cached, healthy in ~20s
 ollama serve                     # usually already running as a service after install
-npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 10 entities, 129 chunks, ~35s
+npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 60 entities, 300 chunks, ~103s
 node src/service/server.js       # NOT `npm run serve` — a task-stop orphans the node child
 curl http://127.0.0.1:8090/healthz
 ```
 
-Measured on this machine: TEI answers a single embed in **~140 ms** (not the 1–3/sec the old
-notes feared), full ingest **34.5 s**, `/healthz` = `{qdrant:true, tei:true, llm:true,
-points:129}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`. Sandbox console at
-`GET http://127.0.0.1:8090/`. Eval reproduces the documented numbers exactly: Hit@5 **96.6%**
-overall / **100%** Kurdish, routing **28.6%**, false-route **0.0%**; the sweep still tops out
-at **78.6%** under the false-route gate (τ_high 0.50 / margin 0.05).
+Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **103 s** for
+the real 60-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
+llm:true, points:300}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
+Sandbox console at `GET http://127.0.0.1:8090/`. Eval reproduces the documented numbers
+exactly, and **held when the corpus grew 6×**: Hit@5 **96.6%** overall / **100%** Kurdish,
+routing **28.6%**, false-route **0.0%**; the sweep still tops out at **78.6%** under the
+false-route gate (τ_high 0.50 / margin 0.05).
+
+⚠️ **Docker Desktop does not start itself here** — after the 2026-09-10 performance pass it
+has to be launched before `docker compose up -d tei`. Qdrant is native and unaffected.
 
 Config changes this required. ⚠️ **`.env` is gitignored, so its two changes live only on this
 machine** — they are documented in the tracked `.env.example`, and anyone setting up a fresh
@@ -104,8 +158,11 @@ box has to reapply them. The `docker-compose.yml` change *is* committed.
   `Assertion failed: ncrypto::CSPRNG(nullptr, 0)` in `InitializeOncePerProcessInternal` — and
   the runner reports whole files as failed with no assertion behind them. It is an OS-entropy
   exhaustion race on rapid process spawn, **not a test defect**: the same files pass
-  individually and serially. Capped at 2 it is green over repeated runs (~35 s);
-  `npm run test:serial` forces one at a time if it ever recurs.
+  individually and serially. Capped at 2 it is **mostly** green (~45 s) — but on 2026-09-12
+  `test/resilience.test.js` failed once at concurrency 2 with no assertion behind it and
+  passed 16/16 on its own and on the next full run, so the race is rarer at 2, not gone.
+  **A single whole-file failure with no failing assertion is this, not a regression** — re-run
+  before investigating, and `npm run test:serial` forces one at a time.
 
 ### 🔒 The safety surface is VERIFIED — `npm run redteam` = **15/15 safe** (2026-09-10)
 
@@ -306,13 +363,27 @@ Also in this session:
 
 ### ⏭ Next session — pick up here
 
-Items 1–9 and the stack bring-up are **done** (`9d4e62b`). What is left:
+Items 1–9 and the stack bring-up are **done** (`9d4e62b`); the bundle half of the content
+work is **imported** (2026-09-12). What is left:
 
-1. **The content work — now the ONLY thing blocking the routing gate:** work through
-   [`content-kit/`](content-kit/README.md) → re-ingest → re-eval → `npm run eval -- --sweep` →
-   update `ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That is what pushes routing accuracy past
-   the 0.85 gate (28.6% at conservative defaults — data-limited by the synthetic seed, not the
-   architecture: 29 of the 42 gold items are knowledge questions labelled `knowledge_flow`).
+0. **The two human passes the FEBRA import could not do** — in priority order, because each
+   is a question a customer already asks and the index cannot answer:
+   **(a) subscription steps** for the 50 imported bundles (harvest the Line/RED rows' real
+   `*230#`-style codes, then get the rest from the product team);
+   **(b) aliases** from the Laila logs, without which the Arabic name and the English name of
+   the same bundle do not find each other;
+   **(c) `bundle_1025`'s validity** and the four roaming products whose ids collide — a BSS
+   lookup; **(d) `kmr` copy**, absent from the export; **(e) a docs/21 native review** of the
+   imported ar/ckb text, which is prompt copy written for a bot, not customer-facing prose.
+   Then retire the invented `bundle_1601/1602/1603` and move the gold items off them.
+
+1. **The routing content — still the ONLY thing blocking the routing gate:** the utterance
+   half of [`content-kit/`](content-kit/README.md) → re-ingest → re-eval →
+   `npm run eval -- --sweep` → update `ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That is what
+   pushes routing accuracy past the 0.85 gate. **The bundle import did not move it, and was
+   never going to** — routing scores against intent `examples`, not bundle cards, so it sat
+   at 28.6% before and after. It is data-limited by the synthetic *utterances*: 29 of the 42
+   gold items are knowledge questions labelled `knowledge_flow`.
 
    **The mechanical half is now scripted** (2026-09-10) — all that is missing is the export:
 
@@ -341,13 +412,15 @@ Items 1–9 and the stack bring-up are **done** (`9d4e62b`). What is left:
    - **`D:\Projects\DevOpsebra\FEBRA PROJECT\`** — ~73 REAL bundles with real
      `BundleID`, price, validity, description and genuine subscription methods ("send 1 to
      230, or dial `*230#`"), as `bundles_{ATL,Line,Yooz}_FEBRA_En.{csv,json}` plus Arabic and
-     Kurdish variants and two `.xlsx`. This is the **seed-20 workstream's actual source** —
-     `data/seed/` currently holds 3 bundles with invented prices and shortcodes.
-     ⚠️ Caveats before trusting it: the ATL CSV has a **quoting bug** (row 1's `Validity`
-     contains `"), Show Bundle Pocket Roaming, Stop Premium SMS, Purchase Validity"` — a
-     mis-escaped export), the `Line` rows have **empty `BundleID`**, and the ar/ku files are
-     **JavaScript bot-flow source** with the text embedded, not data files. It needs a parser
-     and a human pass, not a straight import.
+     Kurdish variants and two `.xlsx`. **✅ Now imported** (2026-09-12) by
+     `npm run bundles:import` — 50 entities; see "The seed is real now" above.
+     Every caveat this note listed was real and is handled by `src/lib/febra.js`: the ATL
+     **quoting bug** (row 1's `Validity` contains `"), Show Bundle Pocket Roaming, Stop
+     Premium SMS, Purchase Validity"` — that row does not import), the `Line` rows' **empty
+     `BundleID`** (they do not import), and the ar/ku files being **JavaScript bot-flow
+     source** rather than data files (they are parsed as `BundleID`-keyed blocks, and are
+     where the Arabic and Sorani names come from). The 23 rows that did not import are
+     itemised in [`content-kit/febra-import-report.md`](content-kit/febra-import-report.md).
    - **`D:\Projects\DevOps\Reportgent_transfers.csv`** — real per-flow transfer volumes
      (`Issue handler - New Miran` 21,077 · `line-agent` 12,157 · `Agent Dispatch - rephrase
      and categorize` 7,480 · `Error-Handler-Flow` 5,934 · `Balance GPT new` 3,117 ·

@@ -1,0 +1,49 @@
+{
+  "entity_id": "bundle_1027",
+  "type": "bundle",
+  "subtype": "atl",
+  "bundleId": 1027,
+  "offerId": null,
+  "names": {
+    "en": "(Free Social+) 5GB for 4 Weeks",
+    "ar": "باقة (فري سوشيال+) 5GB لـ4 أسابيع",
+    "ckb": "فري سۆشیاڵ (5GB) بۆ 4 هەفتە"
+  },
+  "aliases": [],
+  "description": {
+    "en": "Free usage for Viber, WhatsApp, Facebook and Snapchat. Price: 10,000 IQD. Validity: Valid For 4 Weeks, Automatically renewed.",
+    "ar": "5 جيجابايت · استخدام مجاني ل Viber و WhatsApp و Facebook و Snapchat · السعر:10,000 دينار · تتجدد تلقائيا",
+    "ckb": "5 گێگابایت · Viber و WhatsApp و Facebook و Snapchat  بەکارهێنانی خۆرایی بۆ · نرخ:10,000 دينار · نوێ دەبێتەوە بە شێوەیەکی خۆیی"
+  },
+  "price_iqd": 10000,
+  "validity_days": 28,
+  "data_mb": 5120,
+  "display": {
+    "price": {
+      "en": "10,000 IQD"
+    },
+    "validity": {
+      "en": "Valid For 4 Weeks, Automatically renewed"
+    }
+  },
+  "eligible_service_classes": [],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": null,
+  "conflicts_with": [],
+  "offers": [],
+  "status": "draft",
+  "source": "mixed",
+  "version": 1,
+  "updated_at": "2026-09-12T12:55:32.436Z",
+  "languages_present": [
+    "en",
+    "ar",
+    "ckb"
+  ],
+  "attributes": {
+    "febra_family": "ATL",
+    "review_note": "Imported from the FEBRA ATL export by scripts/febra-to-seed.mjs. Facts (id, price, validity, data) are the export’s; ar/ckb text is the export’s own prompt copy, not a translation. NO subscribe/unsubscribe steps were written — the export carries none, and inventing a shortcode is exactly how the placeholder seed went wrong. Still needed before status:verified: how_to, aliases from real logs, the minutes/SMS split (on-net vs all-networks is ambiguous in the source), kmr text, and a docs/21 native review. ⚠ no kmr name in the export — machine translation deliberately NOT substituted (docs/21)"
+  }
+}

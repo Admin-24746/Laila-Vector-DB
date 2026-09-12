@@ -1,0 +1,48 @@
+{
+  "entity_id": "bundle_2632",
+  "type": "bundle",
+  "subtype": "atl",
+  "bundleId": 2632,
+  "offerId": null,
+  "names": {
+    "en": "Yooz 10 Mix",
+    "ar": "متوازن – يووز 10,000"
+  },
+  "aliases": [],
+  "description": {
+    "en": "100 minutes · 3 GB · 150 SMS · Free usage: WhatsApp, Facebook · Validity: 20 days. Price: 10,000 IQD.",
+    "ar": "100 دقيقة · GB 3 إنترنت · 150 رسالة · استخدام مجاني: واتساب، فيسبوك · الصلاحية: 20 يوم"
+  },
+  "price_iqd": 10000,
+  "validity_days": 20,
+  "data_mb": 3072,
+  "display": {
+    "price": {
+      "en": "10,000 IQD"
+    },
+    "validity": {
+      "en": "20 days"
+    }
+  },
+  "eligible_service_classes": [
+    "yooz"
+  ],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": null,
+  "conflicts_with": [],
+  "offers": [],
+  "status": "draft",
+  "source": "mixed",
+  "version": 1,
+  "updated_at": "2026-09-12T12:55:32.436Z",
+  "languages_present": [
+    "en",
+    "ar"
+  ],
+  "attributes": {
+    "febra_family": "Yooz",
+    "review_note": "Imported from the FEBRA Yooz export by scripts/febra-to-seed.mjs. Facts (id, price, validity, data) are the export’s; ar/ckb text is the export’s own prompt copy, not a translation. NO subscribe/unsubscribe steps were written — the export carries none, and inventing a shortcode is exactly how the placeholder seed went wrong. Still needed before status:verified: how_to, aliases from real logs, the minutes/SMS split (on-net vs all-networks is ambiguous in the source), kmr text, and a docs/21 native review. ⚠ no ckb/kmr name in the export — machine translation deliberately NOT substituted (docs/21)"
+  }
+}

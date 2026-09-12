@@ -1,0 +1,49 @@
+{
+  "entity_id": "bundle_1685",
+  "type": "bundle",
+  "subtype": "atl",
+  "bundleId": 1685,
+  "offerId": null,
+  "names": {
+    "en": "Daily TikTok",
+    "ar": "تيك توك اليومية",
+    "ckb": "تیک تۆک رۆژانە"
+  },
+  "aliases": [],
+  "description": {
+    "en": "250 MB · Duration: Valid For 24h · Price: 750 IQD · Does not Auto-renew.",
+    "ar": "250 ميجابايت · يستخدم لتطبيق تيك توك فقط · السعر: 750 دينار · لا تتجدد تلقائيا",
+    "ckb": "مێگابایت250 · تەنها بۆ ئەپڵکەیشنی تیک تۆک بەکاردێت · نرخ: 750 دينار · نوێ نابێتەوە بە شێوەیەکی خۆیی"
+  },
+  "price_iqd": 750,
+  "validity_days": 1,
+  "data_mb": 250,
+  "display": {
+    "price": {
+      "en": "750 IQD"
+    },
+    "validity": {
+      "en": "Valid For 24h"
+    }
+  },
+  "eligible_service_classes": [],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": null,
+  "conflicts_with": [],
+  "offers": [],
+  "status": "draft",
+  "source": "mixed",
+  "version": 1,
+  "updated_at": "2026-09-12T12:55:32.436Z",
+  "languages_present": [
+    "en",
+    "ar",
+    "ckb"
+  ],
+  "attributes": {
+    "febra_family": "ATL",
+    "review_note": "Imported from the FEBRA ATL export by scripts/febra-to-seed.mjs. Facts (id, price, validity, data) are the export’s; ar/ckb text is the export’s own prompt copy, not a translation. NO subscribe/unsubscribe steps were written — the export carries none, and inventing a shortcode is exactly how the placeholder seed went wrong. Still needed before status:verified: how_to, aliases from real logs, the minutes/SMS split (on-net vs all-networks is ambiguous in the source), kmr text, and a docs/21 native review. ⚠ no kmr name in the export — machine translation deliberately NOT substituted (docs/21)"
+  }
+}
