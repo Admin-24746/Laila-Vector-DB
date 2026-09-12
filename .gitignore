@@ -11,3 +11,8 @@ eval/runs/
 # on 2026-09-10. Both names are ignored so neither DB is ever committed again.
 storage/
 qdrant_storage/
+
+# Obsidian's per-machine state, created when the vault/ folder is opened in the app.
+# workspace.json changes on every pane move, so committing it means noise in every diff.
+# The NOTES are the vault; this folder is just one machine's window layout and plugin toggles.
+vault/.obsidian/
