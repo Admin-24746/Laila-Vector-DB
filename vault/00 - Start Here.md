@@ -32,6 +32,9 @@ Iraqi Arabic, Sorani Kurdish and Badini Kurdish.
 | I want to… | Go to |
 |---|---|
 | Get it running on this laptop | [[Running the stack]] |
+| Look up any command | [[Terminal reference]] |
+| Deal with Docker | [[Docker]] |
+| Add, edit or delete content | [[Managing the data]] |
 | Try it out and judge it | [[Testing it yourself]] |
 | Fix something that broke | [[Troubleshooting]] |
 | Understand how it works | [[Architecture]] |
