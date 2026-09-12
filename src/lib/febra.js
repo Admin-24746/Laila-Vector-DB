@@ -111,6 +111,93 @@ export function parsePromptBlocks(text) {
   return blocks;
 }
 
+/**
+ * A RED plan heading reduced to what identifies it, so the same plan can be found in a file
+ * that writes its name in another language: "RED Family 50" and "RED العائلي 50" are one
+ * plan, and "RED 15 — 12 Weeks" and "RED 15 لمدة 12 أسبوعاً" are another.
+ *
+ * The tier is the number attached to RED itself, NOT the first number in the line — taking
+ * the first would read "RED 15 — 12 Weeks" as the 12 tier.
+ *
+ * @returns {string|null} null when the heading is not a plan ("باقات RED العائلية" is a
+ *   section title: it names no tier)
+ */
+export function redSignature(heading) {
+  const s = String(heading);
+  if (!/\bRED\b/i.test(s)) return null;
+  const tier = s.match(/\bRED\b[^\d]{0,20}(\d+)/i);
+  if (!tier) return null;
+  const family = /family|العائلي|عائلي|خێزان/i.test(s);
+  const twelveWeeks = /12\s*(weeks?|أسبوع|اسبوع|هەفتە)|لمدة\s*12/i.test(s);
+  return `red|${tier[1]}|${family ? 'family' : ''}|${twelveWeeks ? '12w' : ''}`;
+}
+
+/**
+ * The RED plans are keyed by their name rather than a BundleID — the Line files list them
+ * as "1. RED 5" with the bullets under it. Only blocks whose title is a plan we are looking
+ * for count, because these files carry other numbered lists ("1. Asiacell App, 2. Dialing
+ * *230#") that are not products.
+ *
+ * @param {string} text contents of a Line FEBRA file
+ * @param {Iterable<string>} wantedNames the English names to match
+ * @returns {Map<string, {name: string, bullets: string[]}>} keyed by lowercased English name
+ */
+export function parseNamedBlocks(text, wantedNames) {
+  const byName = new Map();
+  const bySignature = new Map();
+  for (const name of wantedNames) {
+    const key = name.trim().toLowerCase();
+    byName.set(key, key);
+    const sig = redSignature(name);
+    if (sig) bySignature.set(sig, key);
+  }
+
+  const lines = String(text).split(/\r?\n/);
+  const blocks = new Map();
+  let current = null;
+
+  for (const line of lines) {
+    const heading = line.match(/^\s*\d+[.)]\s*(.+?)\s*$/);
+    if (heading) {
+      const title = heading[1].trim();
+      const key = byName.get(title.toLowerCase()) ?? bySignature.get(redSignature(title));
+      current = key ? { name: title, bullets: [] } : null;
+      if (current) blocks.set(key, current);
+      continue;
+    }
+    if (!current) continue;
+    const raw = line.trim();
+    if (!raw) continue;
+    if (BULLET.test(raw)) current.bullets.push(raw.replace(BULLET, '').trim());
+    else current = null; // prose after the bullets ends the block
+  }
+  return blocks;
+}
+
+/**
+ * The Arabic Line file renders `*230#` as `#230` — ten times, while the Kurdish file and
+ * the Arabic file's own other codes ("*133#", "*244#") are intact. It is the RTL mangling
+ * the source itself warns about ("always display USSD codes in their original LTR format …
+ * The code should not be reversed or altered"), and shipping it would teach the index a
+ * shortcode that does not dial.
+ *
+ * The repair is grounded, not guessed: `#NNN` is rewritten only when `*NNN#` appears in the
+ * reference text for the same plan. A `#NNN` that is already part of a longer code
+ * (`*#313#` is a real form) is left alone.
+ *
+ * @returns {{text: string, repaired: string[]}}
+ */
+export function repairUssd(text, reference) {
+  const canonical = new Set([...String(reference).matchAll(/\*(\d{3,5})#/g)].map((m) => m[1]));
+  const repaired = [];
+  const fixed = String(text).replace(/(^|[^*\d])#(\d{3,5})(?!#)/g, (whole, before, digits) => {
+    if (!canonical.has(digits)) return whole;
+    repaired.push(`#${digits} → *${digits}#`);
+    return `${before}*${digits}#`;
+  });
+  return { text: fixed, repaired };
+}
+
 // ── row → entity ─────────────────────────────────────────────────────────────
 
 const CLEAN = (s) => String(s ?? '').replace(/\s*\|\s*/g, ' · ').replace(/\s+/g, ' ').trim();
@@ -270,6 +357,128 @@ export function rowToEntity(row, { translations = {}, family = '', serviceClasse
     skip: null,
     notes,
   };
+}
+
+// ── the RED line plans ───────────────────────────────────────────────────────
+// These failed the bundle import for a good reason: `bundle` requires an integer bundleId
+// and the Line rows have none. But a RED plan is a tariff on a line, not a bundle bought
+// against one, and `service` carries no id requirement — so they model correctly as
+// services. They are also the only rows in the whole export with REAL subscription steps.
+
+const SUBSCRIBE_BULLET = /subscription method|طريقة الاشتراك|شێوازی بەشداریکردن/i;
+
+const slug = (name) => String(name).toLowerCase()
+  .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+
+/**
+ * @param {object} row a row of bundles_Line_FEBRA_En.json
+ * @param {object} opts
+ * @param {Record<string,{name:string,bullets:string[]}>} opts.translations keyed by language
+ * @param {string} opts.now ISO timestamp
+ * @returns {{entity: object|null, skip: string|null, notes: string[]}}
+ */
+export function lineRowToService(row, { translations = {}, now }) {
+  const notes = [];
+  const name = cleanName(row.name);
+  if (!name) return { entity: null, skip: 'no name in the export row', notes };
+
+  const price = parsePriceIqd(row.price);
+  const days = parseValidityDays(row.validity) ?? parseValidityDays(row.description);
+  if (!price) return { entity: null, skip: `price unreadable from "${CLEAN(row.price)}"`, notes };
+  if (!days) return { entity: null, skip: 'validity unreadable', notes };
+
+  // English comes from the JSON row, other languages from their prompt block. Either way
+  // the subscription line is lifted OUT of the description so the chunker emits it as its
+  // own `subscribe` section (docs/03) rather than burying it in the overview.
+  const split = (parts) => {
+    const body = parts.filter((p) => p && !SUBSCRIBE_BULLET.test(p));
+    const subscribe = parts.find((p) => SUBSCRIBE_BULLET.test(p)) ?? null;
+    return { body: body.join(' · '), subscribe };
+  };
+
+  const en = split(CLEAN(row.description).split(' · '));
+  const names = { en: name };
+  const description = { en: en.body };
+  const subscribe = {};
+  if (en.subscribe) subscribe.en = en.subscribe;
+
+  for (const [lang, block] of Object.entries(translations)) {
+    const { body, subscribe: sub } = split(block.bullets);
+    // The plan name is a brand ("RED 5") and the translated files use it verbatim, so this
+    // is what the entity is actually called in that language — not a translation of ours.
+    if (body) { names[lang] = name; description[lang] = body; }
+    if (!sub) continue;
+    const { text, repaired } = repairUssd(sub, en.subscribe ?? '');
+    subscribe[lang] = text;
+    for (const r of repaired) notes.push(`${lang}: repaired a mangled USSD code in the subscribe step (${r})`);
+  }
+
+  if (!Object.keys(subscribe).length) {
+    notes.push('no subscription method in the source — this plan gets no subscribe chunk');
+  }
+  const missing = ['ar', 'ckb', 'kmr'].filter((l) => !names[l]);
+  if (missing.length) notes.push(`no ${missing.join('/')} copy in the export — machine translation deliberately NOT substituted (docs/21)`);
+
+  return {
+    entity: {
+      entity_id: `service_${slug(name)}`,
+      type: 'service',
+      names,
+      aliases: [],
+      description,
+      ...(Object.keys(subscribe).length ? { how_to: { subscribe } } : {}),
+      price_iqd: price,
+      validity_days: days,
+      display: { price: { en: CLEAN(row.price) }, validity: { en: CLEAN(row.validity) } },
+      eligible_service_classes: ['red'],
+      eligible_locations: [],
+      valid_from: null,
+      valid_to: null,
+      belongs_to_service: null,
+      conflicts_with: [],
+      status: 'draft',
+      source: 'mixed',
+      version: 1,
+      updated_at: now,
+      languages_present: Object.keys(names),
+      attributes: {
+        febra_family: 'Line',
+        review_note: [
+          'Imported from the FEBRA Line export by scripts/febra-to-seed.mjs. Modelled as a',
+          'service, not a bundle: these rows carry NO bundleId, and a RED plan is a tariff on',
+          'a line rather than a bundle bought against one. The subscription steps are the',
+          'export’s own and are the only real ones in it. Still needed before status:verified:',
+          'confirmation that these are the live prices, aliases from real logs, kmr copy, and a',
+          'docs/21 native review.',
+          ...notes.map((n) => `⚠ ${n}`),
+        ].join(' '),
+      },
+    },
+    skip: null,
+    notes,
+  };
+}
+
+/**
+ * @param {object[]} rows bundles_Line_FEBRA_En.json
+ * @param {{translations?:Record<string,Map<string,object>>, now?:string}} [opts]
+ */
+export function linesToServices(rows, { translations = {}, now = new Date().toISOString() } = {}) {
+  const entities = [];
+  const skipped = [];
+  const notes = [];
+  for (const row of rows) {
+    const perLang = {};
+    for (const [lang, blocks] of Object.entries(translations)) {
+      const block = blocks.get(cleanName(row.name).toLowerCase());
+      if (block) perLang[lang] = block;
+    }
+    const { entity, skip, notes: n } = lineRowToService(row, { translations: perLang, now });
+    if (skip) { skipped.push({ family: 'Line', bundleId: '—', name: CLEAN(row.name), reason: skip }); continue; }
+    entities.push(entity);
+    if (n.length) notes.push({ entity_id: entity.entity_id, notes: n });
+  }
+  return { entities, skipped, notes };
 }
 
 /**

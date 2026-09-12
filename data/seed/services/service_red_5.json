@@ -1,0 +1,53 @@
+{
+  "entity_id": "service_red_5",
+  "type": "service",
+  "names": {
+    "en": "RED 5",
+    "ar": "RED 5",
+    "ckb": "RED 5"
+  },
+  "aliases": [],
+  "description": {
+    "en": "Price: 5,000 IQD · Balance: 12,500 IQD · Free SMS: 50 · Free apps: there is no free access to any social media applications. · package Validity: 7 days",
+    "ar": "السعر: 5000 دينار · الرصيد: 12500 دينار · رسائل مجانية: 50 رسالة · التطبيقات المجانية: لا يوجد · مدة الصلاحية الباقة: 7 أيام",
+    "ckb": "نرخ: 5000 دينار · بالانس: 12500 دينار · کورتەنامەی بێبەرامبەر: 50 رسالة · ئەپڵیکەیشنە بێبەرامبەرەکان: لا يوجد · ماوەی بەسەرچوون: 7 أيام"
+  },
+  "how_to": {
+    "subscribe": {
+      "en": "Subscription method: Asiacell App, send 1 to 230, or dial *230#",
+      "ar": "طريقة الاشتراك: تطبيق آسيا سيل أو إرسال 1 إلى 230 أو الاتصال بـ *230#",
+      "ckb": "شێوازی بەشداریکردن: ئەپڵیکەیشنی ئاسیاسێڵ یان ناردنی 1 بۆ 230 یان پەیوەندیکردن بە *230#"
+    }
+  },
+  "price_iqd": 5000,
+  "validity_days": 7,
+  "display": {
+    "price": {
+      "en": "5,000 IQD"
+    },
+    "validity": {
+      "en": "7 days"
+    }
+  },
+  "eligible_service_classes": [
+    "red"
+  ],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": null,
+  "conflicts_with": [],
+  "status": "draft",
+  "source": "mixed",
+  "version": 1,
+  "updated_at": "2026-09-12T13:09:39.891Z",
+  "languages_present": [
+    "en",
+    "ar",
+    "ckb"
+  ],
+  "attributes": {
+    "febra_family": "Line",
+    "review_note": "Imported from the FEBRA Line export by scripts/febra-to-seed.mjs. Modelled as a service, not a bundle: these rows carry NO bundleId, and a RED plan is a tariff on a line rather than a bundle bought against one. The subscription steps are the export’s own and are the only real ones in it. Still needed before status:verified: confirmation that these are the live prices, aliases from real logs, kmr copy, and a docs/21 native review. ⚠ ar: repaired a mangled USSD code in the subscribe step (#230 → *230#) ⚠ no kmr copy in the export — machine translation deliberately NOT substituted (docs/21)"
+  }
+}

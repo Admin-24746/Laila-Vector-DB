@@ -38,7 +38,7 @@ data/seed/       entity JSONs (one file per entity; _TEMPLATE.* to author new on
 data/vocab/      controlled vocabularies (docs/26) — placeholders to CONFIRM
 src/lib/         chunker (docs/03), embedder (docs/04), qdrant (docs/05), validate (docs/25)…
 src/ingest/      pipeline CLI (docs/07): incremental, hash-based, idempotent
-scripts/         content pipelines: febra-to-seed (bundles), logs-to-utterances +
+scripts/         content pipelines: febra-to-seed (bundles + RED services), logs-to-utterances +
                  utterances-to-seed (routing), probes and red-team runners
 src/service/     retrieve() engine (docs/06) + REST server (docs/08) + safety filter (docs/17)
 src/eval/        eval harness (docs/09): Hit@k/MRR per language, routing confusion, τ sweep
@@ -55,29 +55,42 @@ logs/            service audit log JSONL (gitignored)
 Asiacell bundles.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
 `ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
 regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues` is
-**pushed** (2026-09-12). `npm test` = **170 tests, 170 pass / 0 fail**. `npm audit` = **0
+**pushed** (2026-09-12). `npm test` = **178 tests, 178 pass / 0 fail**. `npm audit` = **0
 vulnerabilities** after a fresh `npm audit fix` on 2026-09-10: new `fast-uri`
 SSRF/host-confusion advisories and a `fastify` schema-validation bypass had landed since
 August, so **fastify is now 5.12.3** (re-verified: full suite green, endpoints unchanged).
 **What remains of the content work is the half that needs a human: the log export, and the
 facts the FEBRA export does not carry.**
 
-### 📥 The seed is real now — 50 bundles imported from FEBRA (2026-09-12)
+### 📥 The seed is real now — 62 entities imported from FEBRA (2026-09-12)
 
-`npm run bundles:import` turns the FEBRA product export into `data/seed/bundles/*.json`.
-**50 of its 73 rows imported** (29 ATL + 21 Yooz); the index went from 10 entities / 129
-chunks to **60 entities / 300 chunks**, and retrieval held: Hit@5 **96.6%** overall and
-**100%** Kurdish against a corpus six times larger. Every imported entity is `status:
-"draft"` and carries a `review_note` saying what is still missing.
+`npm run bundles:import` turns the FEBRA product export into seed entities. **62 of its 73
+rows imported**: 50 bundles (29 ATL + 21 Yooz) into `data/seed/bundles/`, and the **12 RED
+line plans as `service` entities** into `data/seed/services/`. The index went from 10
+entities / 129 chunks to **72 entities / 396 chunks**, and retrieval held: Hit@5 **96.6%**
+overall and **100%** Kurdish against a corpus seven times larger. Every imported entity is
+`status: "draft"` and carries a `review_note` saying what is still missing.
+
+**The RED plans are why `/v1/answer` can now answer "how do I subscribe?" at all.** They
+failed the bundle import for a good reason — `bundle` requires an integer `bundleId` and
+those rows have none — but a RED plan is a *tariff on a line*, not a bundle bought against
+one, and `service` carries no id requirement. They are also the only rows in the whole
+export with real subscription steps. Eight of the twelve carry them; the four 12-week
+app-exclusive plans state none, so they get no `subscribe` chunk rather than an invented one.
+
+⚠️ **The Arabic file's shortcodes are corrupted and the importer repairs them.** It writes
+`*230#` as `#230` — ten times — while the Kurdish file and the Arabic file's own other codes
+(`*133#`, `*244#`) are intact. It is the RTL mangling the source itself warns about
+(*"always display USSD codes in their original LTR format … The code should not be reversed
+or altered"*). `repairUssd()` rewrites `#NNN` **only** when `*NNN#` appears in the English
+row for that same plan, so the fix is grounded rather than guessed, and a legitimate `*#313#`
+is left alone. Without it the index would have taught customers a code that does not dial.
 
 It is an import **with a gate**, not a copy. A row becomes an entity only when its identity
 and every required number can be *read* from the export — the worksheet's rule is that a
-number is real or blank, never estimated — so **23 rows did not import**, each with its
+number is real or blank, never estimated — so **11 rows did not import**, each with its
 reason in [`content-kit/febra-import-report.md`](content-kit/febra-import-report.md):
 
-- **12 Line/RED rows have no `bundleId`.** Identity is the numeric id, never the display
-  name (docs/27 §4). Ironically these are the only rows carrying **real subscription steps**
-  ("send 1 to 230, or dial `*230#`") — worth harvesting by hand.
 - **Two ids are each claimed by two different products** (1013 = Iran *and* UAE roaming
   daily; 1012 likewise weekly). Importing either would answer a question about one country
   with the other's facts, so neither side imports.
@@ -91,8 +104,9 @@ Four things the parser deliberately refuses to do, each pinned by a test in
 `test/febra.test.js`:
 
 - **No invented `how_to`.** The ATL/Yooz export carries no subscription steps at all, and
-  inventing a `*123#` is precisely how the placeholder seed went wrong. The imported
-  entities have **no subscribe/unsubscribe chunks** — that is the largest single gap.
+  inventing a `*123#` is precisely how the placeholder seed went wrong. **The 50 bundles
+  have no subscribe/unsubscribe chunks** — still the largest single gap, and see the note
+  below on why it is not a transcription job.
 - **An unlimited bundle's GB figure is the FUP threshold, not an allowance.** "Unlimited
   Internet for 24 hours … FUP applied after using (3GB)" imports with `data_mb` **blank**;
   storing 3 GB would answer "how much data do I get?" with a cap the customer does not have.
@@ -116,16 +130,16 @@ them — removing them is a separate, deliberate step that has to move the eval 
 ./qdrant_bin/qdrant.exe          # native; do NOT `docker compose up qdrant` — different DB
 docker compose up -d tei         # TEI only; model is already cached, healthy in ~20s
 ollama serve                     # usually already running as a service after install
-npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 60 entities, 300 chunks, ~103s
+npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 72 entities, 396 chunks, ~136s
 node src/service/server.js       # NOT `npm run serve` — a task-stop orphans the node child
 curl http://127.0.0.1:8090/healthz
 ```
 
-Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **103 s** for
-the real 60-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
-llm:true, points:300}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
+Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **136 s** for
+the real 72-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
+llm:true, points:396}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
 Sandbox console at `GET http://127.0.0.1:8090/`. Eval reproduces the documented numbers
-exactly, and **held when the corpus grew 6×**: Hit@5 **96.6%** overall / **100%** Kurdish,
+exactly, and **held when the corpus grew 7×**: Hit@5 **96.6%** overall / **100%** Kurdish,
 routing **28.6%**, false-route **0.0%**; the sweep still tops out at **78.6%** under the
 false-route gate (τ_high 0.50 / margin 0.05).
 
@@ -366,10 +380,16 @@ Also in this session:
 Items 1–9 and the stack bring-up are **done** (`9d4e62b`); the bundle half of the content
 work is **imported** (2026-09-12). What is left:
 
-0. **The two human passes the FEBRA import could not do** — in priority order, because each
-   is a question a customer already asks and the index cannot answer:
-   **(a) subscription steps** for the 50 imported bundles (harvest the Line/RED rows' real
-   `*230#`-style codes, then get the rest from the product team);
+0. **The human passes the FEBRA import could not do** — in priority order, because each is a
+   question a customer already asks and the index cannot answer:
+   **(a) subscription steps for the 50 BUNDLES — and this is a design call, not data entry.**
+   The ATL prompt file instructs the bot: *"Use only the tool, don't provide information
+   about the subscription, renewal, stop or unsubscribe methods here, don't invent any
+   steps"* — the codes live behind a `User_Self_Subscription` tool, **not in any document**.
+   So either they come from product/BSS into `how_to`, or `/v1/answer` learns to hand
+   subscription questions off to that tool. Doing neither is the current state: retrieval
+   returns a bundle card and the answer layer has nothing to say about subscribing. (The 12
+   RED services are the exception — their steps were in the source and are now indexed.)
    **(b) aliases** from the Laila logs, without which the Arabic name and the English name of
    the same bundle do not find each other;
    **(c) `bundle_1025`'s validity** and the four roaming products whose ids collide — a BSS

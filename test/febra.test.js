@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parsePriceIqd, parseValidityDays, parseDataMb, parsePromptBlocks, rowToEntity, febraToEntities,
+  parseNamedBlocks, redSignature, repairUssd, lineRowToService,
 } from '../src/lib/febra.js';
 
 const NOW = '2026-09-12T00:00:00Z';
@@ -206,4 +207,104 @@ test('the Yooz family carries its service-class eligibility', () => {
     { now: NOW },
   );
   assert.deepEqual(entities[0].eligible_service_classes, ['yooz']);
+});
+
+// ── the RED line plans (imported as services, not bundles) ───────────────────
+
+test('redSignature: the tier is RED’s own number, not the first number in the line', () => {
+  assert.equal(redSignature('RED 15 — 12 Weeks'), redSignature('RED 15 لمدة 12 أسبوعاً'));
+  assert.notEqual(redSignature('RED 15 — 12 Weeks'), redSignature('RED 12'));
+  assert.equal(redSignature('RED Family 50'), redSignature('RED العائلي 50'));
+  // A section title names no tier, so it identifies no plan.
+  assert.equal(redSignature('باقات RED العائلية'), null);
+  assert.equal(redSignature('Asiacell App'), null);
+});
+
+test('named blocks: a plan is found even when the file writes its name in another language', () => {
+  const arabic = [
+    'How to get the RED Line:',
+    '    1. تطبيق آسيا سيل',       // a numbered list that is not a product
+    '    2. *الاتصال بالرمز #230',
+    '1. RED 5',
+    '   - السعر: 5000 دينار',
+    '2. باقات RED العائلية',        // a section title
+    '1. RED العائلي 50',
+    '   - السعر: 50000 دينار',
+  ].join('\n');
+  const blocks = parseNamedBlocks(arabic, ['RED 5', 'RED Family 50']);
+  assert.equal(blocks.get('red 5').bullets[0], 'السعر: 5000 دينار');
+  assert.equal(blocks.get('red family 50').bullets[0], 'السعر: 50000 دينار');
+  assert.equal(blocks.size, 2, 'the app/USSD list and the section title are not products');
+});
+
+test('USSD repair: the Arabic file’s reversed shortcode is fixed from the English row', () => {
+  // The Arabic Line file writes *230# as #230 ten times — the RTL mangling the source
+  // itself warns about. Shipping it would put a code that does not dial in front of a
+  // customer.
+  const { text, repaired } = repairUssd(
+    'طريقة الاشتراك: تطبيق آسيا سيل أو إرسال 1 إلى 230 أو الاتصال بـ #230',
+    'Subscription method: Asiacell App, send 1 to 230, or dial *230#',
+  );
+  assert.match(text, /\*230#/);
+  assert.doesNotMatch(text, /[^*]#230(?!#)/);
+  assert.deepEqual(repaired, ['#230 → *230#']);
+});
+
+test('USSD repair: leaves alone what it cannot ground, and real *#NNN# forms', () => {
+  // *#313# is a legitimate code, present identically in both files.
+  const legit = repairUssd('50% discount via *#313#.', 'discount via *#313#');
+  assert.equal(legit.text, '50% discount via *#313#.');
+  assert.deepEqual(legit.repaired, []);
+  // Nothing in the reference says *999# exists, so #999 is not "repaired" into one.
+  const ungrounded = repairUssd('dial #999', 'Subscription method: dial *230#');
+  assert.equal(ungrounded.text, 'dial #999');
+});
+
+const lineRow = (over = {}) => ({
+  bundleId: '', name: 'RED 5', price: '5,000 IQD', validity: '7 days',
+  description: 'Price: 5,000 IQD | Balance: 12,500 IQD | Free SMS: 50 | package Validity: 7 days | Subscription method: Asiacell App, send 1 to 230, or dial *230#',
+  ...over,
+});
+
+test('a RED plan imports as a service — no bundleId required, and that is correct', () => {
+  const { entity, skip } = lineRowToService(lineRow(), { now: NOW });
+  assert.equal(skip, null);
+  assert.equal(entity.type, 'service');
+  assert.equal(entity.entity_id, 'service_red_5');
+  assert.equal(entity.price_iqd, 5000);
+  assert.equal(entity.validity_days, 7);
+  assert.deepEqual(entity.eligible_service_classes, ['red']);
+});
+
+test('the subscription step becomes its own chunk, not a line buried in the overview', () => {
+  const { entity } = lineRowToService(lineRow(), { now: NOW });
+  assert.match(entity.how_to.subscribe.en, /send 1 to 230/);
+  assert.doesNotMatch(entity.description.en, /Subscription method/,
+    'it is lifted out so the chunker emits a subscribe section (docs/03)');
+  assert.match(entity.description.en, /Balance: 12,500 IQD/);
+});
+
+test('a plan whose source states no subscription method gets no how_to at all', () => {
+  const { entity, notes } = lineRowToService(lineRow({
+    name: 'RED 15 — 12 Weeks', validity: '12 Weeks',
+    description: 'App-exclusive (Pay for Two, Get the Third Free). Every 4 weeks: Balance 45,000 IQD | package Validity: 12 Weeks',
+  }), { now: NOW });
+  assert.equal(entity.how_to, undefined);
+  assert.equal(entity.validity_days, 84);
+  assert.ok(notes.some((n) => /no subscription method/.test(n)));
+});
+
+test('translated plans keep the brand name and repair the code in their own text', () => {
+  const { entity } = lineRowToService(lineRow(), {
+    now: NOW,
+    translations: {
+      ar: {
+        name: 'RED 5',
+        bullets: ['السعر: 5000 دينار', 'الرصيد: 12500 دينار', 'طريقة الاشتراك: تطبيق آسيا سيل أو إرسال 1 إلى 230 أو الاتصال بـ #230'],
+      },
+    },
+  });
+  assert.equal(entity.names.ar, 'RED 5', 'the plan is called RED 5 in the Arabic source too');
+  assert.match(entity.how_to.subscribe.ar, /\*230#/);
+  assert.doesNotMatch(entity.description.ar, /طريقة الاشتراك/);
 });
