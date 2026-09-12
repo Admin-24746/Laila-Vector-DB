@@ -7,10 +7,16 @@ updated: 2026-09-12
 # Evaluation
 
 ```bash
+npm run probe          # behaviour on real questions, incl. the ones it must refuse (~5 s)
 npm run eval           # the gate
 npm run eval:sweep     # threshold calibration
 npm run gaps           # what the corpus could not answer
 ```
+
+> [!tip] `npm run probe` answers a different question from `npm run eval`
+> The eval asks "does retrieval find the gold chunk?". The probe asks "does it behave
+> correctly on a real customer's question, **including refusing what it cannot answer?**"
+> Both of the 2026-09-12 fabrications passed the eval untouched. See [[Testing it yourself]].
 
 Harness: `src/eval/run.js` (docs/09). Gold set: `eval/gold/gold.jsonl`. Reports are saved to
 `eval/runs/` (gitignored).

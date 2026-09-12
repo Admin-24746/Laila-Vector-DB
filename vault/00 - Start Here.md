@@ -32,6 +32,7 @@ Iraqi Arabic, Sorani Kurdish and Badini Kurdish.
 | I want to… | Go to |
 |---|---|
 | Get it running on this laptop | [[Running the stack]] |
+| Try it out and judge it | [[Testing it yourself]] |
 | Fix something that broke | [[Troubleshooting]] |
 | Understand how it works | [[Architecture]] |
 | Understand the data | [[Data model]] |
