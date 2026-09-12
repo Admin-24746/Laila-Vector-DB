@@ -34,6 +34,9 @@ Config: copy `.env.example` → `.env` (defaults work locally).
 
 ```
 docs/            the design contract (00–28)
+vault/           Obsidian vault — runbook + orientation. Open the folder as a vault, or
+                 just read `vault/00 - Start Here.md`. docs/ still wins on intent, this
+                 README on state.
 data/seed/       entity JSONs (one file per entity; _TEMPLATE.* to author new ones)
 data/vocab/      controlled vocabularies (docs/26) — placeholders to CONFIRM
 src/lib/         chunker (docs/03), embedder (docs/04), qdrant (docs/05), validate (docs/25)…
@@ -55,21 +58,22 @@ logs/            service audit log JSONL (gitignored)
 Asiacell bundles.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
 `ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
 regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues` is
-**pushed** (2026-09-12). `npm test` = **178 tests, 178 pass / 0 fail**. `npm audit` = **0
+**pushed** (2026-09-12). `npm test` = **179 tests, 179 pass / 0 fail**. `npm audit` = **0
 vulnerabilities** after a fresh `npm audit fix` on 2026-09-10: new `fast-uri`
 SSRF/host-confusion advisories and a `fastify` schema-validation bypass had landed since
 August, so **fastify is now 5.12.3** (re-verified: full suite green, endpoints unchanged).
 **What remains of the content work is the half that needs a human: the log export, and the
 facts the FEBRA export does not carry.**
 
-### 📥 The seed is real now — 62 entities imported from FEBRA (2026-09-12)
+### 📥 The seed is real now — 63 entities from FEBRA (2026-09-12)
 
 `npm run bundles:import` turns the FEBRA product export into seed entities. **62 of its 73
 rows imported**: 50 bundles (29 ATL + 21 Yooz) into `data/seed/bundles/`, and the **12 RED
-line plans as `service` entities** into `data/seed/services/`. The index went from 10
-entities / 129 chunks to **72 entities / 396 chunks**, and retrieval held: Hit@5 **96.6%**
-overall and **100%** Kurdish against a corpus seven times larger. Every imported entity is
-`status: "draft"` and carries a `review_note` saying what is still missing.
+line plans as `service` entities** into `data/seed/services/`. A 63rd entity,
+`service_red_line`, is hand-authored from the same source (below). The index went from 10
+entities / 129 chunks to **73 entities / 402 chunks**, and retrieval held: Hit@5 **96.6%**
+overall and **100%** Kurdish against a corpus seven times larger. Everything from this import
+is `status: "draft"` and carries a `review_note` saying what is still missing.
 
 **The RED plans are why `/v1/answer` can now answer "how do I subscribe?" at all.** They
 failed the bundle import for a good reason — `bundle` requires an integer `bundleId` and
@@ -77,6 +81,16 @@ those rows have none — but a RED plan is a *tariff on a line*, not a bundle bo
 one, and `service` carries no id requirement. They are also the only rows in the whole
 export with real subscription steps. Eight of the twelve carry them; the four 12-week
 app-exclusive plans state none, so they get no `subscribe` chunk rather than an invented one.
+All twelve point at **`service_red_line`** via `belongs_to_service`, so validation refuses
+them if that entity is ever deleted.
+
+`service_red_line` is **hand-authored, not generated** — it comes from the prose sections of
+the Line files ("What is RED Line", the balance rules, the Arabic FAQ), and a parser for
+prose would be fragile where the structured lists are not. Its languages deliberately carry
+**different depth**: the standard tariff (1.5 IQD/sec in the five northern governorates,
+2.8 elsewhere, SMS 50), the one-way switch to RED, and "send 0 to 230" to cancel a package
+are stated only in the Arabic source, so they appear only in `description.ar`. It answers
+"what is RED line", "شنو خط RED", "how do I switch to RED" — three of those at score 1.000.
 
 ⚠️ **The Arabic file's shortcodes are corrupted and the importer repairs them.** It writes
 `*230#` as `#230` — ten times — while the Kurdish file and the Arabic file's own other codes
@@ -130,14 +144,14 @@ them — removing them is a separate, deliberate step that has to move the eval 
 ./qdrant_bin/qdrant.exe          # native; do NOT `docker compose up qdrant` — different DB
 docker compose up -d tei         # TEI only; model is already cached, healthy in ~20s
 ollama serve                     # usually already running as a service after install
-npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 72 entities, 396 chunks, ~136s
+npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 73 entities, 402 chunks, ~139s
 node src/service/server.js       # NOT `npm run serve` — a task-stop orphans the node child
 curl http://127.0.0.1:8090/healthz
 ```
 
-Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **136 s** for
-the real 72-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
-llm:true, points:396}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
+Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **139 s** for
+the real 73-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
+llm:true, points:402}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
 Sandbox console at `GET http://127.0.0.1:8090/`. Eval reproduces the documented numbers
 exactly, and **held when the corpus grew 7×**: Hit@5 **96.6%** overall / **100%** Kurdish,
 routing **28.6%**, false-route **0.0%**; the sweep still tops out at **78.6%** under the

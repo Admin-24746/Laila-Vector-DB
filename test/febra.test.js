@@ -308,3 +308,9 @@ test('translated plans keep the brand name and repair the code in their own text
   assert.match(entity.how_to.subscribe.ar, /\*230#/);
   assert.doesNotMatch(entity.description.ar, /طريقة الاشتراك/);
 });
+
+test('a RED plan points at the RED line entity it is a package on', () => {
+  const { entity } = lineRowToService(lineRow(), { now: NOW });
+  assert.equal(entity.belongs_to_service, 'service_red_line',
+    'validation enforces the reference, so the twelve cannot silently outlive the line entity');
+});

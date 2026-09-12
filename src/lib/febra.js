@@ -434,7 +434,10 @@ export function lineRowToService(row, { translations = {}, now }) {
       eligible_locations: [],
       valid_from: null,
       valid_to: null,
-      belongs_to_service: null,
+      // The plans are packages ON the RED line, and the line is its own (hand-authored)
+      // entity. Validation enforces this reference, so deleting service_red_line.json
+      // rejects all twelve rather than leaving them pointing at nothing.
+      belongs_to_service: 'service_red_line',
       conflicts_with: [],
       status: 'draft',
       source: 'mixed',
