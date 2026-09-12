@@ -29,11 +29,12 @@ Config: copy `.env.example` → `.env` (defaults work locally).
 | `POST /v1/route` | semantic router — `{text}` → `{flow, confidence, action: route\|clarify\|fallback, reason}` |
 | `POST /v1/answer` | retrieve + relevance gate + LLM compose (docs/15 prompt) + number-grounding guardrail (docs/08 §3) + solicitation guard + injection filter & leak-guard (docs/17) → adds `abstained` |
 
+| `GET /healthz` | stack health + point count |
+
 > ⚠️ **Per-chunk `score` is a fused RANK score, not a confidence** — an irrelevant chunk can
 > score 1.00. Threshold on **`relevance`** (raw cosine) or the response's `max_relevance`.
 > And `grounded: true` does not mean "answered": an honest "I don't have that detail" is
 > grounded, so check **`abstained`** to tell the two apart.
-| `GET /healthz` | stack health + point count |
 
 ## Layout
 
