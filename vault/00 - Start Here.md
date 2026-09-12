@@ -52,7 +52,7 @@ Iraqi Arabic, Sorani Kurdish and Badini Kurdish.
 ./qdrant_bin/qdrant.exe          # terminal 1 — leave running
 # start Docker Desktop by hand, then:
 docker compose up -d tei         # terminal 2
-npm run ingest:rebuild           # ~2.5 min
+npm run ingest:rebuild           # ~2.2 min
 node src/service/server.js       # terminal 3 — leave running
 curl http://127.0.0.1:8090/healthz
 ```
@@ -61,6 +61,16 @@ Full detail and every trap: [[Running the stack]].
 
 ## Current state, one line
 
-Phase 0 + Phase 1 done, engineering backlog empty, **real Asiacell content in the index**
-(73 entities / 402 chunks). Retrieval passes its gate; **routing does not**, and cannot until
-real customer utterances arrive. See [[Project state]].
+Phase 0 + Phase 1 done, engineering backlog empty, **real Asiacell content in the index** —
+**75 entities / 409 chunks**, of which 5 are `retired` and unanswerable, so **70 answer**.
+`npm test` 190 pass · `npm run redteam` 21/21 safe · `npm run probe` all checks pass.
+
+Gates: Hit@5 **87.5%** ✅ · Kurdish **85.7%** ✅ · routing **8.9%** ❌ · false-route **0.0%** ✅.
+Those retrieval numbers are *lower and more trustworthy* than the ones before 2026-09-12,
+which scored against invented placeholders — [[Evaluation]] explains the swap.
+
+⛔ **Production serves nothing today**: everything is `status: draft` and production hides
+draft. The deployment gate is human verification, not code — [[Managing the data]].
+
+Routing is the one failing gate and it needs the Laila log export, not code. See
+[[Project state]].

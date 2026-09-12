@@ -19,9 +19,10 @@ updated: 2026-09-12
         │  2. understand()    ← follow-up rewrite (LLM), gated
         │  3. embed (TEI)     ← BGE-M3, 1024-dim
         │  4. search (Qdrant) ← dense + sparse hybrid, one collection
-        │  5. rank / filter   ← language, location, service class, dates
-        │  6. compose (LLM)   ← /v1/answer only
-        │  7. guardrail       ← every number must trace to the evidence
+        │  5. rank / filter   ← language, location, service class, dates, status
+        │  6. relevance gate  ← below the floor: decline, never call the LLM
+        │  7. compose (LLM)   ← /v1/answer only
+        │  8. guardrail       ← numbers trace to evidence; no solicitation; no script drift
         └───────────────────────────────┘
                         │
          chunks + grounded_facts + bucket_hint
@@ -57,9 +58,10 @@ message. Routing is nearest-neighbour against those examples with two thresholds
 - below `ROUTE_TAU_LOW` → **fallback**
 
 > [!important] Routing quality is a content problem, not an architecture problem
-> Routing sits at 28.6% because the intent examples are invented placeholders. Adding 62 real
-> bundles moved it by **zero**, exactly as expected — bundles are not what routing scores
-> against. See [[Project state]].
+> Routing sits at **8.9%** because the intent examples are invented placeholders. Adding 62
+> real bundles moved it by **zero**, exactly as expected — bundles are not what routing scores
+> against. It then *fell* from 28.6% when the gold set moved onto real questions, because the
+> examples had been written around the placeholder bundles. See [[Evaluation]].
 
 ## Code map
 
@@ -78,11 +80,11 @@ message. Routing is nearest-neighbour against those examples with two thresholds
 | `src/ingest/run.js` | The ingest CLI: hash-based, incremental, idempotent |
 | `src/service/retrieve.js` | The retrieval engine |
 | `src/service/understand.js` | Follow-up rewrite + anchoring guard |
-| `src/service/answer.js` | Compose + number guardrail + script-drift guard |
+| `src/service/answer.js` | Compose + relevance floor + number guardrail + solicitation guard + script-drift guard |
 | `src/service/safety.js` | Injection detection, leak guard |
 | `src/service/server.js` | HTTP surface + auth + sandbox console |
 | `src/eval/run.js` | The gate metrics |
-| `scripts/` | Content pipelines and probes |
+| `scripts/` | Content pipelines ([[Content pipelines]]), `probe.mjs` ([[Testing it yourself]]), the red-team runner |
 
 ## Things that will bite you
 

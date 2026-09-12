@@ -9,17 +9,31 @@ Stack (D3/D4): **Qdrant** (hybrid dense+lexical, one collection) + **TEI serving
 
 ## Quickstart
 
+Run these **on the host**, from the repo root — never inside a container
+([`vault/Terminal reference.md`](vault/Terminal%20reference.md) explains why `npm` is
+`not found` in a Docker shell).
+
 ```bash
-docker compose up -d      # Qdrant :6333 + TEI/BGE-M3 :8080 (first start downloads ~2.3GB)
 npm install
-npm run ingest            # seed data → validate → chunk ×4 languages → embed → Qdrant
-npm run serve             # retrieval-svc on :8090
-npm run eval              # gold-set metrics (add -- --sweep for threshold calibration)
-npm run sanity:kurdish    # D5 eyeball check + BGE-M3 license check
-npm test                  # unit suite (docs/23) — offline, no stack needed
+./qdrant_bin/qdrant.exe        # native Qdrant :6333 — own terminal, leave running
+docker compose up -d tei       # TEI/BGE-M3 :8080 — name the service, see the warning below
+npm run ingest:rebuild         # seed → validate → chunk ×4 languages → embed → Qdrant
+node src/service/server.js     # retrieval-svc :8090 — own terminal, leave running
+npm run probe                  # ~5 s pass/fail smoke test over real questions
+npm run eval                   # gold-set metrics (add -- --sweep for threshold calibration)
+npm test                       # unit suite (docs/23) — offline, no stack needed
 ```
 
-Config: copy `.env.example` → `.env` (defaults work locally).
+> ⚠️ **Two traps that have each cost a debugging session.**
+> **`docker compose up -d` without a service name** also starts the compose `qdrant`, which
+> has its own volume — a *different, empty* database, so everything looks broken for no
+> reason. Always `docker compose up -d tei`; the real index is the native binary's `./storage`.
+> **`npm run serve`** makes the server an npm child process, so stopping the task orphans it
+> and port 8090 stays taken. Run `node src/service/server.js` directly.
+> Full bring-up guide with every trap: [`vault/Running the stack.md`](vault/Running%20the%20stack.md).
+
+Config: copy `.env.example` → `.env` (defaults work locally). ⚠️ On this laptop `.env` also
+needs raised LLM/embed timeouts — see "Config changes this required" below.
 
 ## Endpoints (docs/08 contract)
 
@@ -39,9 +53,12 @@ Config: copy `.env.example` → `.env` (defaults work locally).
 
 ```
 docs/            the design contract (00–28)
-vault/           Obsidian vault — runbook + orientation. Open the folder as a vault, or
-                 just read `vault/00 - Start Here.md`. docs/ still wins on intent, this
-                 README on state.
+vault/           Obsidian vault — 15 linked notes. Open the folder as a vault, or start at
+                 `vault/00 - Start Here.md`. docs/ still wins on intent, this README on state.
+                   Running the stack · Docker · Terminal reference · Managing the data
+                   Testing it yourself · Troubleshooting · Architecture · Data model
+                   Content pipelines · Endpoints · Evaluation · Safety and security
+                   Project state · Glossary
 data/seed/       entity JSONs (one file per entity; _TEMPLATE.* to author new ones)
 data/vocab/      controlled vocabularies (docs/26) — placeholders to CONFIRM
 src/lib/         chunker (docs/03), embedder (docs/04), qdrant (docs/05), validate (docs/25)…
@@ -261,10 +278,11 @@ curl http://127.0.0.1:8090/healthz
 Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **132 s** for
 the real 75-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
 llm:true, points:409}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
-Sandbox console at `GET http://127.0.0.1:8090/`. Eval reproduces the documented numbers
-exactly, and **held when the corpus grew 7×**: Hit@5 **96.6%** overall / **100%** Kurdish,
-routing **28.6%**, false-route **0.0%**; the sweep still tops out at **78.6%** under the
-false-route gate (τ_high 0.50 / margin 0.05).
+Sandbox console at `GET http://127.0.0.1:8090/`. Current eval: Hit@5 **87.5%** overall /
+**85.7%** Kurdish, routing **8.9%**, false-route **0.0%** — measured against real content
+since the 2026-09-12 gold migration (the older 96.6% / 100% scored against the invented
+placeholders; see above). The sweep still tops out at **78.6%** under the false-route gate
+(τ_high 0.50 / margin 0.05), and is still not to be committed.
 
 ⚠️ **Docker Desktop does not start itself here** — after the 2026-09-10 performance pass it
 has to be launched before `docker compose up -d tei`. Qdrant is native and unaffected.
@@ -495,6 +513,8 @@ Also in this session:
 - Eval: Hit@5 **96.6%** overall / **100%** Kurdish / false-route **0%** — no retrieval
   regression (routing 28.6% unchanged, still data-limited by the synthetic seed).
   Report: `eval/runs/2026-07-19T06-46-26-955Z.json`.
+  ⚠️ *Those figures are superseded: they scored against the invented placeholders. The
+  comparable numbers on real content (2026-09-12) are 87.5% / 85.7% / 8.9%.*
 - A multi-agent adversarial review of the diff confirmed precision bugs in `safety.js` —
   **all fixed and regression-pinned in the second 2026-07-19 session (above)**.
 
@@ -518,15 +538,29 @@ work is **imported** (2026-09-12). What is left:
    **(c) `bundle_1025`'s validity** and the four roaming products whose ids collide — a BSS
    lookup; **(d) `kmr` copy**, absent from the export; **(e) a docs/21 native review** of the
    imported ar/ckb text, which is prompt copy written for a bot, not customer-facing prose.
-   Then retire the invented `bundle_1601/1602/1603` and move the gold items off them.
+   ✅ Retiring the invented `bundle_1601/1602/1603` and moving the gold items off them is
+   **done** (2026-09-12) — see the usefulness-probe section above.
+   **(f) human verification.** Nothing is `status: verified`, which is why production serves
+   nothing at all. This is the deployment gate.
+
+0b. **Two pieces of engineering the probe left open**, neither blocked on anyone else:
+   **deterministic deflections for neutrality / abuse / scope** — the relevance floor now
+   catches those baits before the model can apply its own rules, so they get the fixed scope
+   reply instead of a composed one (injection already has a deterministic deflection; these
+   three need the same); and **comparison questions** — *"which is cheaper, X or Y?"* scores
+   0.520 and abstains even with both entities in the top 5, because a single max-relevance
+   gate is the wrong shape for a two-entity question.
 
 1. **The routing content — still the ONLY thing blocking the routing gate:** the utterance
    half of [`content-kit/`](content-kit/README.md) → re-ingest → re-eval →
    `npm run eval -- --sweep` → update `ROUTE_TAU_HIGH`/`ROUTE_MARGIN` in `.env`. That is what
    pushes routing accuracy past the 0.85 gate. **The bundle import did not move it, and was
    never going to** — routing scores against intent `examples`, not bundle cards, so it sat
-   at 28.6% before and after. It is data-limited by the synthetic *utterances*: 29 of the 42
-   gold items are knowledge questions labelled `knowledge_flow`.
+   at 28.6% before and after, then **fell to 8.9%** when the gold set moved onto real
+   questions, because the intent examples had been written around the placeholder bundles.
+   8.9% is what routing actually does for a real customer. It is data-limited by the
+   synthetic *utterances*: 31 of the 45 gold items are knowledge questions labelled
+   `knowledge_flow`.
 
    **The mechanical half is now scripted** (2026-09-10) — all that is missing is the export:
 
@@ -670,6 +704,10 @@ and **`app.inject()` cannot reproduce request-target attacks** — use a raw soc
   utterances, ~60 vocab CONFIRMs, and the 116-string native-review pack.
 
 ## Status (2026-07-15) — Phase 0 exit criterion MET
+
+> ⚠️ **Historical record.** Every number below was measured against the 10-entity placeholder
+> seed. For current state read "Where we left off" at the top: 75 entities / 409 chunks,
+> Hit@5 87.5% / 85.7% Kurdish, routing 8.9%.
 
 Ingestion runs end-to-end (10 seed entities → 129 chunks, idempotent re-runs) and the eval
 harness produces numbers:

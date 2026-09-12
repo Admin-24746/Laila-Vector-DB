@@ -59,22 +59,40 @@ trustworthy answers   ←── status: verified         ←── human review 
 
 ## Next, in order
 
-1. **Get the log export.** The only thing that moves the routing gate. `npm run logs:extract`
-   accepts CSV / JSONL / JSON array / `{"value":[…]}`, so the format is not a blocker — the
-   file's existence is.
-2. **Decide the subscription-answer strategy** (above).
-3. **Aliases from the logs.** Without them the Arabic and English names of one bundle do not
-   find each other — a live probe for *"شكد سعر باقة يووز 25 مكس؟"* matched the **English**
-   chunk, because the Arabic name in the export is the semantic "متوازن – يووز 25,000".
-4. **Retire the invented placeholders.** `bundle_1601/1602/1603`, `service_shukran` and
-   `terminology_line` still hold invented prices and shortcodes. They were left in place
-   because the gold set and `conflicts_with` point at them — retiring them has to move the
-   eval with it.
-5. **A small BSS lookup.** `bundle_1025`'s validity; which of the colliding 1013/1012 ids is
+### Blocked on people, not code
+
+1. **The Laila log export.** The only thing that moves the routing gate. `npm run logs:extract`
+   takes CSV / JSONL / a JSON array / a `{"value":[…]}` envelope, so the format is not the
+   blocker — the file's existence is.
+2. **Decide the subscription-answer strategy** (see the finding above): product/BSS supplies
+   the codes, or `/v1/answer` hands subscription questions off to the tool that owns them.
+3. **A small BSS lookup.** `bundle_1025`'s validity; which of the colliding ids 1013/1012 is
    Iran and which is UAE.
-6. **`kmr` (Badini) copy** — absent from every source we have.
-7. **The docs/21 native review** of the imported Arabic and Sorani text. It is prompt copy
+4. **Human verification.** Nothing is `status: verified`, which is why production serves
+   nothing. This is the deployment gate — [[Managing the data]].
+5. **A docs/21 native review** of the imported Arabic and Sorani text. It is prompt copy
    written for a bot, not customer-facing prose.
+6. **`kmr` (Badini) copy** — absent from every source we have, so the Badini slice of the
+   eval is honestly at zero.
+
+### Open engineering work
+
+7. **Deterministic deflections for neutrality / abuse / scope.** Introduced by the relevance
+   floor on 2026-09-12: those baits score in the same band as unanswerable questions, so the
+   floor catches them before the model can apply its own rules and they get the fixed scope
+   reply instead of a composed one. Injection already has a deterministic deflection; these
+   three need the same. Safe today, blunter than designed — [[Safety and security]].
+8. **Comparison questions.** *"which is cheaper, X or Y?"* scores **0.520** and abstains even
+   though both entities are in the top 5. A single max-relevance gate is the wrong shape for a
+   two-entity question; it needs a higher `top_k` or a per-entity gate.
+9. **Aliases.** A live probe for *"شكد سعر باقة يووز 25 مكس؟"* matched the **English** chunk,
+   because the Arabic name in the export is the semantic "متوازن – يووز 25,000"; and
+   *"پاکێجی ئینتەرنێتی مانگانە"* scores 0.415 because the real Sorani names say "4 هەفتەیی",
+   not "مانگانە". The mechanical half can be generated from the names already in the
+   entities; real customer phrasings still need the logs.
+10. **Restore the eval coverage the gold migration lost** once real content allows it: a
+    location-restricted bundle (worksheet row 16), `unsubscribe`, and fee items.
+11. **Open a PR.** 18 commits ahead of `master`, all pushed, none reviewed by anyone but us.
 
 ## Commit history that matters
 
@@ -89,6 +107,14 @@ trustworthy answers   ←── status: verified         ←── human review 
 | `f83f6e5` | Scripted the routing-content pipeline |
 | `e862789` | **Imported the real bundle catalogue** (50 bundles) |
 | `a59b233` | **Imported the RED line plans as services** (12, with real subscribe steps) |
+| `a0432fd` | The hand-authored RED Line entity, and this vault |
+| `08f06b8` | **The four usefulness-probe fixes** — placeholders retired, `relevance` exposed, the solicitation guard and relevance floor, `service_red_line` split, gold set migrated |
+| `6dd32e6` | `npm run probe` |
+| `37421d0` | The testing guide, and the production-mode finding |
+| `5251ca0` | Docker, data/embedding management and terminal reference notes |
+| `264aeec` | Said plainly which terminal the commands run in |
+
+18 commits ahead of `origin/master`. All pushed; **none merged, no PR open.**
 
 ## Documents, and which to trust
 

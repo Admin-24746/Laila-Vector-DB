@@ -16,8 +16,8 @@ updated: 2026-09-12
 | **RED Line** | An Asiacell line type: up to 4.5× balance multiplier, social apps included, family sharing. Switching to it is **one-way** (you can only move on to YOOZ) |
 | **YOOZ** | Another line type. Yooz bundles require a Yooz line |
 | **FEBRA** | The bot-flow project whose export is the source of the real bundle catalogue |
-| **Shukran** | Asiacell's rewards programme. **The name is real; the definition in the repo is invented** |
-| **Eshrat Omar** (عشرة عمر) | A discounts programme named by the RED Line source but never defined there |
+| **Shukran** | Asiacell's rewards programme. The name is real; the repo's definition was invented, so the entity is **retired** — asking about it now gets an honest non-answer |
+| **Eshrat Omar** (عشرة عمر) | A discounts programme named by the RED Line source but **defined nowhere**. The canonical example of "naming is not defining" — a 3B model invented a definition for it 3 runs out of 3 ([[Safety and security]]) |
 | **Elna / Lil-Kul** | Bundle families. "Elna w lil Kul" is the repeat-purchase-fee pattern (3×/month → +2,500 IQD) |
 | **FUP** | Fair use policy — the threshold after which an "unlimited" bundle is throttled. **Not an allowance**, and never stored as one |
 | **MSISDN** | A phone number. Redacted by the log pipeline |
@@ -33,7 +33,7 @@ updated: 2026-09-12
 | `send 0 to 230` | Cancel a RED package (stated in the Arabic source only) |
 | `call 200` | Customer service — one of the ways to switch to RED |
 | `*#313#` | Women's services discount. A legitimate `*#NNN#` form — **not** a mangled code |
-| `*123#`, `1234` | ⚠️ **INVENTED.** They appear only in the placeholder seed entities and dial nothing |
+| `*123#`, `1234`, `*321*2#` | ⚠️ **INVENTED.** They existed only in the placeholder entities — now `retired` — and dial nothing |
 
 > [!danger] RTL mangling of shortcodes
 > The Arabic source writes `*230#` as `#230`, the Kurdish as `#230*`. The importer repairs
@@ -50,6 +50,14 @@ updated: 2026-09-12
 | **`grounded_facts`** | The machine-readable answer (price, validity, id) returned beside the prose |
 | **`bucket_hint`** | A coarse category hint for the calling flow |
 | **Guardrail** | The check that every number in an answer traces to that entity's evidence |
+| **`score`** | The **fused rank** score (RRF) on a retrieval result. Orders the list; says nothing about relevance — an irrelevant chunk can score 1.00. Never threshold on it |
+| **`relevance`** | Raw **cosine** similarity of a chunk to the query. This is the confidence number. Added 2026-09-12 |
+| **`max_relevance`** | The best `relevance` in a result set — the one number a caller gates on |
+| **RRF** | Reciprocal Rank Fusion — how the dense and lexical result lists are merged. Rank-based by construction, which is why it cannot be a confidence |
+| **Relevance floor** | `ANSWER_RELEVANCE_FLOOR` (0.55). Below it `/v1/answer` declines **without calling the LLM**, so there is nothing to invent from |
+| **`abstained`** | The service declined rather than answered. `grounded: true` does **not** mean answered — an honest "I don't have that detail" is grounded |
+| **Solicitation guard** | Fails an answer that asks the customer for a secret or for account details, or that leaks an internal id |
+| **Semantic magnet** | An entity whose description covers so many topics that it ranks first for unrelated questions. `service_red_line` was one until it was split |
 | **`misattributed_number`** | A number that is real but belongs to a *different* entity in the same result set |
 | **Anchoring guard** | The check that a follow-up rewrite is grounded in the actual conversation |
 | **τ_high / τ_low** | `ROUTE_TAU_HIGH` / `ROUTE_TAU_LOW` — the route and fallback thresholds |
