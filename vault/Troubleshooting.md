@@ -28,6 +28,15 @@ Ollama is down: `curl http://127.0.0.1:11434/api/tags`. Start it, or install/pul
 You started it with `npm run serve` and the node child was orphaned. Kill the stray node
 process. Always run `node src/service/server.js` directly.
 
+### `npm: not found` / `node: not found`
+You are in a shell **inside the TEI container** (Docker Desktop → `laila-tei` → Exec). That
+container runs the embedding model and holds none of this project — no node, no npm, no git,
+no source files. Nothing you run there can work.
+
+Open a Windows terminal instead and `cd "D:\Projects\DevOps\Vector DB"`. Docker is
+addressed from the host too: `docker compose up -d tei`, `docker compose logs tei`. See the
+top of [[Terminal reference]].
+
 ## Ingestion
 
 ### `422 batch size 24 > maximum allowed batch size 16`

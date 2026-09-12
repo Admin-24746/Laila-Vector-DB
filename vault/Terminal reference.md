@@ -9,6 +9,33 @@ updated: 2026-09-12
 Every command, what it does, what it prints, what it costs. Run from the repo root
 (`D:\Projects\DevOps\Vector DB`). Timings are measured on this laptop.
 
+> [!danger] WHICH terminal — read this first
+> **Everything on this page runs on Windows, in the project folder.** Not inside a container.
+>
+> ```
+> ✅  PowerShell / Windows Terminal / Git Bash / the VS Code terminal
+>     cd "D:\Projects\DevOps\Vector DB"
+>     npm run …   node …   git …   docker compose …
+>
+> ⛔  Docker Desktop → laila-tei → "Exec"  (a shell INSIDE the container)
+>     npm: not found     node: not found
+> ```
+>
+> The `laila-tei` container is a single-purpose appliance: it runs one binary that serves
+> BAAI/bge-m3 over HTTP. Verified — it has **no node, no npm, no git**, and **none of this
+> project's files**. Its only mount is the 2.3 GB model cache at `/data`:
+>
+> ```
+> docker inspect laila-tei --format '{{range .Mounts}}{{.Source}} -> {{.Destination}}{{end}}'
+> →  laila-kb_tei_cache/_data -> /data
+> ```
+>
+> So `npm test` in there fails with `/bin/sh: npm: not found`, and always will. **Docker is
+> spoken to FROM the host** — `docker compose up -d tei`, `docker compose logs tei` — never
+> from a shell inside it. The only reason to exec into that container at all is to look at
+> the model cache (`docker exec laila-tei ls /data`), and even TEI's own health is easier
+> from the host: `curl http://127.0.0.1:8080/health`.
+
 > [!info] Shell
 > Examples are Git Bash / POSIX. In PowerShell the only differences that bite are
 > `$env:VAR = "x"` instead of `VAR=x cmd`, and `2>$null` instead of `2>/dev/null`.
@@ -67,18 +94,18 @@ npm run utterances:import -- <csv> --merge    # ADD to existing examples instead
 
 ## Testing
 
-| Command | Does | Cost |
-|---|---|---|
-| `npm run probe` | Pass/fail over real questions **including the refusals** | ~5 s |
-| `npm run probe -- --answers` | Also the LLM path | ~3–4 min |
-| `npm run probe -- --verbose` | Print the replies, not just verdicts | — |
-| `npm test` | Unit suite, 190 tests. Offline | ~150 s |
-| `npm run test:serial` | Same, one file at a time (entropy race) | ~200 s |
-| `npm run eval` | The gate: Hit@5, routing, false-route | ~4 min |
-| `npm run eval:sweep` | Threshold calibration sweep | ~5 min |
-| `npm run gaps` | What the corpus could not answer | ~1 min |
-| `npm run redteam` | 21 adversarial items. **Needs the service + an LLM** | ~9 min |
-| `npm run sanity:kurdish` | Kurdish eyeball check + model licence | ~1 min |
+| Command                      | Does                                                     | Cost     |
+| ---------------------------- | -------------------------------------------------------- | -------- |
+| `npm run probe`              | Pass/fail over real questions **including the refusals** | ~5 s     |
+| `npm run probe -- --answers` | Also the LLM path                                        | ~3–4 min |
+| `npm run probe -- --verbose` | Print the replies, not just verdicts                     | —        |
+| `npm test`                   | Unit suite, 190 tests. Offline                           | ~150 s   |
+| `npm run test:serial`        | Same, one file at a time (entropy race)                  | ~200 s   |
+| `npm run eval`               | The gate: Hit@5, routing, false-route                    | ~4 min   |
+| `npm run eval:sweep`         | Threshold calibration sweep                              | ~5 min   |
+| `npm run gaps`               | What the corpus could not answer                         | ~1 min   |
+| `npm run redteam`            | 21 adversarial items. **Needs the service + an LLM**     | ~9 min   |
+| `npm run sanity:kurdish`     | Kurdish eyeball check + model licence                    | ~1 min   |
 
 A single test file, when you are iterating:
 

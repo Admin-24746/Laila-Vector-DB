@@ -29,6 +29,15 @@ docker-compose.yml  project name: laila-kb
 >
 > **Always name the service: `docker compose up -d tei`.**
 
+> [!danger] Do not run project commands inside the container
+> The `laila-tei` container holds the embedding model and nothing else — **no node, no npm,
+> no git, and none of this repo's files** (its only mount is the model cache at `/data`).
+> A shell opened from Docker Desktop's **Exec** tab therefore answers every project command
+> with `/bin/sh: npm: not found`, which is correct rather than broken.
+>
+> `npm …`, `node …` and `docker compose …` all run **on Windows**, from
+> `D:\Projects\DevOps\Vector DB`. See the top of [[Terminal reference]].
+
 ## Everyday commands
 
 ```bash
