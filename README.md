@@ -28,7 +28,6 @@ Config: copy `.env.example` → `.env` (defaults work locally).
 | `POST /v1/retrieve` | knowledge retrieval — `{text, language?, filters?{location,service_class}, top_k?, expand?}` → chunks + `grounded_facts` + `bucket_hint` + `max_relevance` |
 | `POST /v1/route` | semantic router — `{text}` → `{flow, confidence, action: route\|clarify\|fallback, reason}` |
 | `POST /v1/answer` | retrieve + relevance gate + LLM compose (docs/15 prompt) + number-grounding guardrail (docs/08 §3) + solicitation guard + injection filter & leak-guard (docs/17) → adds `abstained` |
-
 | `GET /healthz` | stack health + point count |
 
 > ⚠️ **Per-chunk `score` is a fused RANK score, not a confidence** — an irrelevant chunk can
