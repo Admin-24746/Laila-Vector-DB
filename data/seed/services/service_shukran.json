@@ -8,7 +8,12 @@
     "ckb": "شوکران",
     "kmr": "Şukran"
   },
-  "aliases": ["shukran", "شكرا", "شکران", "shukran rewards"],
+  "aliases": [
+    "shukran",
+    "شكرا",
+    "شکران",
+    "shukran rewards"
+  ],
   "description": {
     "en": "Shukran is Asiacell's rewards program (PLACEHOLDER — replace with the real definition: what it is, how points are earned, and how they are redeemed).",
     "ar": "شكراً هو برنامج مكافآت أسياسيل (نص مؤقت — استبدله بالتعريف الحقيقي: ما هو، كيف تُكسب النقاط، وكيف تُستبدل).",
@@ -27,12 +32,17 @@
   "eligible_locations": [],
   "belongs_to_service": null,
   "conflicts_with": [],
-  "status": "draft",
+  "status": "retired",
   "source": "manual",
   "version": 1,
   "updated_at": "2026-07-15T00:00:00Z",
-  "languages_present": ["en", "ar", "ckb", "kmr"],
+  "languages_present": [
+    "en",
+    "ar",
+    "ckb",
+    "kmr"
+  ],
   "attributes": {
-    "review_note": "PLACEHOLDER — 'Shukran' is named in docs/02 as an example service but its real definition is unknown. Replace all text with the real service details before status:verified."
+    "review_note": "PLACEHOLDER — 'Shukran' is named in docs/02 as an example service but its real definition is unknown. Replace all text with the real service details before status:verified. ⚠ RETIRED 2026-09-12. Reason: a usefulness probe found the invented placeholders ranking #1 on 6 of 24 realistic customer questions and in the top 3 on 11 of 24 — they outranked the 50 real FEBRA bundles because they were the only entities with BOTH aliases and how_to, so they were the richest documents in the index. Worst observed case: \"how do I subscribe to Weekly TikTok?\" returned bundle_1603 subscribe at fused score 1.00, offering the INVENTED code \"dial *321*2# or send NET2 to 1234\". The invented Shukran definition was also the material a 3B model borrowed to fabricate a definition of \"Eshrat Omar\". Retired rather than deleted so the record and the gold-set history survive; `status: retired` is excluded from every query by buildFilter(). To bring one back, author it from a real source and set status accordingly. Shukran — the NAME is real, the definition was invented."
   }
 }

@@ -1,0 +1,30 @@
+{
+  "entity_id": "terminology_red_tariff",
+  "type": "terminology",
+  "names": {
+    "ar": "تعرفة خط RED العادية"
+  },
+  "aliases": [
+    "تعرفة RED",
+    "سعر المكالمة بخط RED",
+    "تعرفة المكالمات"
+  ],
+  "description": {
+    "ar": "تعرفة خط RED العادية عندما لا تكون باقة RED فعالة: 1.5 دينار للثانية للمكالمات داخل وخارج الشبكة في محافظات الموصل وكركوك وأربيل والسليمانية ودهوك، و2.8 دينار للثانية في باقي المحافظات، والرسالة القصيرة 50 دينار."
+  },
+  "eligible_service_classes": ["red"],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": "service_red_line",
+  "conflicts_with": [],
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-09-12T00:00:00Z",
+  "languages_present": ["ar"],
+  "attributes": {
+    "febra_family": "Line",
+    "review_note": "HAND-AUTHORED from the الاسئلة المتداولة section of the FEBRA 'Line FEBRA Ar' file. ⚠ ARABIC ONLY, deliberately: the standard pay-as-you-go tariff is stated nowhere in the English or Kurdish sources, and inventing an English version would mean translating per-second call rates myself (docs/21). An English-speaking customer therefore gets no answer to this question — that is an authoring gap to fill from BSS, not a bug. ⚠ These rates are the single most consequential numbers in the seed: a wrong per-second rate is a billing complaint. Confirm against BSS before status:verified. Split out of service_red_line (2026-09-12) so a tariff question does not have to outrank the line's own overview."
+  }
+}

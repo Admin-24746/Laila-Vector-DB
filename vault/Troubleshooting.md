@@ -64,6 +64,29 @@ Two causes, both common:
    checks the strings are non-empty, so a stale value yields HTTP 200 + fallback for every
    question instead of an honest 503. Blank them to get the 503 back.
 
+### The service refuses a question it should be able to answer
+The **relevance floor** fired: `max_relevance` came back below `ANSWER_RELEVANCE_FLOOR`
+(default 0.55) and `/v1/answer` declined without calling the model. Check the number on
+`/v1/retrieve` first — if the right chunk is in the list but scores ~0.4–0.5, this is the
+floor, not a retrieval failure.
+
+Two known shapes of this, both measured:
+- **Comparison questions.** *"which is cheaper, Weekly TikTok or Elna Weekly?"* scores
+  **0.520**. Both entities are in the top 5, but a two-entity question dilutes similarity
+  against any single chunk, so a single max-relevance gate is the wrong shape for it.
+- **Category questions in Sorani.** *"پاکێجی ئینتەرنێتی مانگانە"* ("monthly internet
+  package") scores **0.415**, because the real Sorani names say "4 هەفتەیی" (4-weekly), not
+  "مانگانە" (monthly). That is an alias gap, not a model problem.
+
+`ANSWER_RELEVANCE_FLOOR=0` disables the gate — but read [[Safety and security]] first: it is
+what stops a 3B model inventing a definition out of irrelevant evidence.
+
+### An off-topic or abusive message gets the generic scope reply
+Expected, and a known limitation rather than a bug. Behavioural baits score in the same
+relevance band as unanswerable questions, so the floor catches them before the model can
+apply its NEUTRALITY or SCOPE rules. Safe, but blunter than a composed deflection — see the
+warning at the end of [[Safety and security]].
+
 ### An answer comes back `grounded: false` with `misattributed_number`
 Working as designed. The guardrail binds each number to the entity whose evidence carries it;
 a price borrowed from a *different* bundle in the same top-5 is reported rather than served.

@@ -18,6 +18,9 @@ const CHUNK = {
   section: 'fees_edgecases',
   language: 'en',
   score: 0.88,
+  // Rank-based `score` orders the list; cosine `relevance` is what a caller thresholds on
+  // (added 2026-09-12 — see retrieve.js). Both are part of the chunk contract.
+  relevance: 0.71,
   text: '[Combo Bundle · BTL] Costs 5000 IQD. Repeat purchase fee 2,500 IQD.',
   payload: {
     chunk_id: 'bundle_combo::fees_edgecases::en',
@@ -79,16 +82,19 @@ test('/v1/retrieve: response shape per docs/08 §2', async () => {
 
   assert.deepEqual(
     Object.keys(body).sort(),
-    ['bucket_hint', 'chunks', 'grounded_facts', 'latency_ms', 'query_understanding'],
+    ['bucket_hint', 'chunks', 'grounded_facts', 'latency_ms', 'max_relevance', 'query_understanding'],
   );
   assert.equal(body.chunks.length, 1);
   // Chunk shape: exactly the docs/08 fields — and the raw payload must NOT leak.
   assert.deepEqual(
     Object.keys(body.chunks[0]).sort(),
-    ['chunk_id', 'entity_id', 'language', 'score', 'section', 'text'],
+    ['chunk_id', 'entity_id', 'language', 'relevance', 'score', 'section', 'text'],
   );
   assert.equal(body.chunks[0].chunk_id, CHUNK.chunk_id);
   assert.equal(typeof body.chunks[0].score, 'number');
+  // max_relevance is the one number a caller can gate on — see the relevance floor in
+  // answer.js. It must be surfaced, not buried per chunk.
+  assert.equal(body.max_relevance, 0.71);
   // grounded_facts = structured metadata of the top entity (feeds the guardrail)
   assert.deepEqual(body.grounded_facts, { price_iqd: 5000, repeat_purchase_fee_iqd: 2500 });
   assert.ok(['A', 'B', 'C'].includes(body.bucket_hint));
@@ -180,11 +186,14 @@ test('/v1/answer: response shape per docs/08 §2–3', async () => {
 
   assert.deepEqual(
     Object.keys(body).sort(),
-    ['answer', 'bucket_hint', 'citations', 'grounded', 'grounded_facts',
-      'latency_ms', 'query_understanding'],
+    ['abstained', 'answer', 'bucket_hint', 'citations', 'grounded', 'grounded_facts',
+      'latency_ms', 'max_relevance', 'query_understanding'],
   );
   assert.equal(typeof body.answer, 'string');
   assert.equal(typeof body.grounded, 'boolean'); // Druid escalates on grounded:false
+  // `grounded` cannot express "I declined to answer": an honest "I don't have that detail"
+  // is grounded. `abstained` is the flag a caller needs to tell the two apart.
+  assert.equal(body.abstained, false);
   assert.deepEqual(body.citations, [CHUNK.chunk_id]);
   assert.deepEqual(body.grounded_facts, { price_iqd: 5000, repeat_purchase_fee_iqd: 2500 });
 });

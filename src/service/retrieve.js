@@ -62,7 +62,17 @@ export function buildFilter({ types, language, filters = {} }) {
  *   topK, language (hard filter — omit for cross-lingual), filters:{location, service_class}
  *   mode: 'hybrid' (RRF dense+lexical — knowledge) | 'dense' (cosine scores — routing,
  *         because RRF fusion scores are rank-based and unusable as confidence thresholds)
- * @returns {Promise<{chunk_id:string, entity_id:string, section:string, language:string, score:number, text:string, payload:object}[]>}
+ *
+ * Every result carries BOTH numbers, and they answer different questions:
+ *   `score`     — the fused rank score. Good for ORDER, meaningless as confidence: an
+ *                 irrelevant chunk that happens to rank first in both lists scores 1.0.
+ *   `relevance` — raw cosine similarity to the query. This is the one a caller can
+ *                 threshold on to decide "I have nothing relevant" (docs/06 §7).
+ * Adding `relevance` costs one extra Qdrant query and no extra embedding. It was added
+ * after a 2026-09-12 probe found `/v1/retrieve` returning score 1.00 for "what is Eshrat
+ * Omar?" — a term the corpus never defines — leaving callers no way to abstain.
+ *
+ * @returns {Promise<{chunk_id:string, entity_id:string, section:string, language:string, score:number, relevance:number|null, text:string, payload:object}[]>}
  */
 export async function retrieve(text, {
   types = KNOWLEDGE_TYPES, topK = CONFIG.topK, language = null, filters = {}, mode = 'hybrid',
@@ -83,8 +93,25 @@ export async function retrieve(text, {
   }
 
   let res;
+  let relevanceOf = (p) => p.score; // dense mode: the score already IS cosine
   try {
-    res = await qdrant.query(CONFIG.collection, body);
+    if (mode === 'dense') {
+      res = await qdrant.query(CONFIG.collection, body);
+    } else {
+      // The fused query decides the order; a parallel dense-only query supplies the cosine
+      // number. Same embedding, so this is one extra round trip and no extra TEI call.
+      const [fused, cosine] = await Promise.all([
+        qdrant.query(CONFIG.collection, body),
+        qdrant.query(CONFIG.collection, {
+          query: dense, using: 'dense', filter, limit: topK * 4, with_payload: ['chunk_id'],
+        }),
+      ]);
+      res = fused;
+      const byChunk = new Map(cosine.points.map((p) => [p.payload.chunk_id, p.score]));
+      // A chunk the fusion surfaced from the lexical side only may fall outside the dense
+      // window; null says "unknown", which is not the same as "irrelevant".
+      relevanceOf = (p) => byChunk.get(p.payload.chunk_id) ?? null;
+    }
   } catch (err) {
     // Down/hung Qdrant → typed error; the service maps it to 503 (docs/06 §7, docs/08 §5)
     throw DependencyError.wrap('qdrant', err);
@@ -95,9 +122,19 @@ export async function retrieve(text, {
     section: p.payload.section,
     language: p.payload.language,
     score: p.score,
+    relevance: relevanceOf(p),
     text: p.payload.text,
     payload: p.payload,
   }));
+}
+
+/**
+ * The best cosine similarity in a result set — the one number a caller can threshold on.
+ * Null when nothing carries a relevance (empty results, or a lexical-only match set).
+ */
+export function maxRelevance(results) {
+  const scores = results.map((r) => r.relevance).filter((s) => typeof s === 'number');
+  return scores.length ? Math.max(...scores) : null;
 }
 
 const FACT_KEYS = [

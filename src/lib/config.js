@@ -39,6 +39,13 @@ export const CONFIG = {
   port: num('PORT', 8090),
   serviceToken: process.env.SERVICE_TOKEN || null,
   topK: num('TOP_K', 5),
+  // Below this cosine similarity, /v1/answer says it does not have the detail instead of
+  // asking a 3B model to compose over evidence that is not about the question. Measured on
+  // 2026-09-12 over 17 probes: answerable questions scored 0.588–0.740, questions the corpus
+  // cannot answer ("what is Eshrat Omar?" 0.346, "who won the world cup?" 0.368) scored
+  // 0.346–0.610. 0.55 keeps every answerable case with headroom and drops the clear misses.
+  // Recalibrate with the same probe after the corpus changes materially; 0 disables the gate.
+  answerRelevanceFloor: num('ANSWER_RELEVANCE_FLOOR', 0.55),
   // Business timezone. `valid_from`/`valid_to` are calendar dates in Asiacell's local time,
   // so "today" must be resolved there — comparing against UTC expired a promo at 03:00
   // Baghdad instead of local midnight (audit 2026-08-22 item 9).

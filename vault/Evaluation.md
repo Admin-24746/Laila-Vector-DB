@@ -17,25 +17,44 @@ Harness: `src/eval/run.js` (docs/09). Gold set: `eval/gold/gold.jsonl`. Reports 
 
 ## The prototype gate — current numbers
 
-| Metric | Gate | 2026-09-12 | |
-|---|---|---|---|
-| Hit@5 overall | ≥ 0.85 | **96.6%** | ✅ |
-| Hit@5 Kurdish | ≥ 0.70 | **100%** | ✅ |
-| Routing accuracy | ≥ 0.85 | **28.6%** | ❌ |
-| False-route rate | ≤ 0.05 | **0.0%** | ✅ |
+| Metric | Gate | 2026-09-12 | | vs. the old number |
+|---|---|---|---|---|
+| Hit@5 overall | ≥ 0.85 | **87.5%** | ✅ | was 96.6% |
+| Hit@5 Kurdish | ≥ 0.70 | **85.7%** | ✅ | was 100% |
+| Routing accuracy | ≥ 0.85 | **8.9%** | ❌ | was 28.6% |
+| False-route rate | ≤ 0.05 | **0.0%** | ✅ | unchanged |
 
-> [!important] The one number that matters about these numbers
-> Retrieval held at 96.6% / 100% while the corpus grew **7×** — from 10 entities / 129 chunks
-> to 73 / 402. That is the real result of the content import: more real content did not dilute
-> retrieval.
+> [!important] Every one of those old numbers was measuring invented content
+> **28 of the 42 gold items pointed at the retired placeholders.** "Hit@5 96.6% / Kurdish
+> 100%" was retrieval scored against bundles with made-up prices and made-up shortcodes, and
+> the Kurdish figure was 5 real Sorani items plus **5 Badini items whose content existed
+> nowhere but the placeholder**.
 >
-> Routing did not move **and was never going to**. Routing scores against intent `examples`,
-> not bundle cards. It will move when real utterances land, and not before. See
+> The gold set was rewritten onto real entities (31 retrieval items: 13 en, 11 ar, 7 ckb),
+> each `expected_chunk` verified against chunks the chunker actually emits. **87.5% / 85.7%
+> is the first honest measurement**, and both still clear their gates.
+>
+> Routing's drop is a measurement artefact too, and an instructive one: the intent `examples`
+> were written around the placeholder bundles, so they matched the old placeholder-shaped
+> queries better than they match real questions about real products. 8.9% is what routing
+> actually does for a real customer. It moves when real utterances land — see
 > [[Content pipelines]].
 
-## Why routing is 28.6%
+### Coverage the migration lost
 
-Not architecture — data. The intent examples are invented placeholders, and **29 of the 42
+Not hidden, because these are gaps in the *content*, not in the harness:
+
+| Lost | Why | Comes back when |
+|---|---|---|
+| `unsubscribe` + `fees_edgecases` on a bundle (9 items) | The FEBRA export states no cancellation steps and no repeat-purchase fees | Product/BSS supplies them |
+| The **kmr (Badini)** slice entirely (5 items) | No source we have carries Badini | Badini copy is authored |
+| Location **exclusion** | The only location-restricted entity was invented, Baghdad-only and all | A real location-restricted bundle lands (worksheet row 16) |
+
+The Sorani slice was widened from 2 to 7 items to keep the Kurdish gate meaningful.
+
+## Why routing is 8.9%
+
+Not architecture — data. The intent examples are invented placeholders, and **31 of the 45
 gold items are knowledge questions labelled `knowledge_flow`**, so the gold set itself is
 lopsided. Typical failures are all the same shape:
 
@@ -66,12 +85,13 @@ The sweep tops out at **78.6%** under the false-route gate (τ_high 0.50 / margi
 
 ## The test suite
 
-`npm test` — **179 tests, all passing** (2026-09-12). Offline; no stack needed except the
+`npm test` — **190 tests, all passing** (2026-09-12). Offline; no stack needed except the
 Qdrant integration test.
 
 | File | Pins |
 |---|---|
 | `febra.test.js` | The FEBRA import's refusals ([[Content pipelines]]) |
+| `answer-guards.test.js` | The relevance floor and the solicitation guard ([[Safety and security]]) |
 | `logmine.test.js` | Log mining, PII redaction, train/gold separation |
 | `audit-fixes.test.js`, `audit-round2.test.js` | Every audit finding ([[Safety and security]]) |
 | `auth.test.js` | The auth gate, **over real sockets** |

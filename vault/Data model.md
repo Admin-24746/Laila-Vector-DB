@@ -11,10 +11,10 @@ derived and disposable.
 
 ```
 data/seed/
-  bundles/      50 real + 3 placeholder
-  services/     RED line + 12 RED plans + Shukran placeholder
-  intents/      5 routing intents (placeholder utterances)
-  terminology/  1 placeholder
+  bundles/      50 real (+ 3 retired placeholders, kept for the record)
+  services/     RED line + 12 RED plans (+ retired Shukran placeholder)
+  intents/      5 routing intents (placeholder utterances — still the routing blocker)
+  terminology/  RED balance + RED tariff (+ retired placeholder)
 data/vocab/     controlled vocabularies — languages, locations, service classes, flows, entity types
 ```
 
@@ -100,7 +100,18 @@ Warnings: missing required languages, and `languages_present` disagreeing with t
 | `draft` | Unconfirmed. Visible in the sandbox; **hidden when `NODE_ENV=production`** |
 | `needs_review` | Someone flagged it |
 | `verified` | A human confirmed the facts. **Nothing in the repo is here yet** |
-| `retired` | Excluded from retrieval |
+| `retired` | Excluded from retrieval by `buildFilter`, kept on disk for the record |
+
+> [!danger] Invented content does not sit quietly next to real content — it outranks it
+> `bundle_1601/1602/1603`, `service_shukran` and `terminology_line` were placeholders with
+> made-up prices and made-up shortcodes. They were **retired on 2026-09-12** after a probe
+> measured them ranking **#1 on 6 of 24** realistic questions and appearing in the top 3 on
+> **11 of 24** — they won because they were the only entities with *both* aliases and
+> `how_to`, which made them the richest documents in the index. One returned an invented
+> shortcode at a fused score of 1.00 for a question about a different bundle.
+>
+> The lesson generalises: a placeholder is not neutral. Until an entity is real, retiring it
+> is safer than leaving it to be retrieved.
 
 Every imported entity carries `attributes.review_note` naming exactly what is unconfirmed.
 That note is the contract between the importer and the person who will verify it.

@@ -16,7 +16,7 @@ import { DependencyError } from '../lib/errors.js';
 import { qdrantHealthy, countPoints } from '../lib/qdrant.js';
 import { embedderHealthy } from '../lib/embedder.js';
 import { llmConfigured } from '../lib/llm.js';
-import { groundedFacts, bucketHint, entityCard } from './retrieve.js';
+import { groundedFacts, bucketHint, entityCard, maxRelevance } from './retrieve.js';
 import { routeMessage } from './route.js';
 import { understandQuery, mergedRetrieve, detectLanguage, LANG_CODES } from './understand.js';
 import { composeAnswer } from './answer.js';
@@ -119,6 +119,9 @@ export function buildApp(overrides = {}) {
       chunks: results.map(({ payload, ...r }) => r),
       grounded_facts: groundedFacts(results),
       bucket_hint: bucketHint(results),
+      // Per-chunk `score` orders the list but is rank-based; `max_relevance` is cosine and
+      // is the number to threshold on when deciding whether anything here is usable.
+      max_relevance: maxRelevance(results),
       query_understanding: understandingMeta(u),
       latency_ms: Date.now() - t0,
     };
@@ -221,9 +224,13 @@ export function buildApp(overrides = {}) {
     const response = {
       answer: composed.answer,
       grounded: composed.grounded,
+      // True when the service declined to answer rather than composing over weak evidence.
+      // `grounded` alone cannot say this: an honest "I don't have that detail" is grounded.
+      abstained: composed.abstained ?? false,
       citations: composed.citations,
       grounded_facts: facts,
       bucket_hint: bucketHint(results),
+      max_relevance: maxRelevance(results),
       query_understanding: understandingMeta(u),
       latency_ms: Date.now() - t0,
     };

@@ -1,0 +1,32 @@
+{
+  "entity_id": "terminology_red_balance",
+  "type": "terminology",
+  "names": {
+    "en": "RED package balance",
+    "ar": "رصيد باقة RED"
+  },
+  "aliases": [
+    "red balance",
+    "رصيد RED",
+    "رصيد باقة ريد"
+  ],
+  "description": {
+    "en": "The balance included in a RED package can only be spent on calls, SMS and direct internet usage charged per MB. It cannot be used to activate or buy an internet bundle, a free-social bundle or an unlimited bundle — \"internet\" here means usage, not bundles. Unused package balance is not refundable: it does not return to the main balance when the package is cancelled. Free social media and WhatsApp usage applies to the main RED line only and cannot be shared with a family number.",
+    "ar": "رصيد باقة RED يُستخدم فقط للمكالمات والرسائل القصيرة واستخدام الإنترنت المباشر بحسب الميغابايت، ولا يمكن استخدامه لتفعيل أو شراء باقة إنترنت أو باقة سوشيال مجانية أو باقة غير محدودة. الرصيد غير المستخدم غير قابل للاسترجاع ولا يعود إلى الرصيد الأساسي عند إلغاء الباقة."
+  },
+  "eligible_service_classes": ["red"],
+  "eligible_locations": [],
+  "valid_from": null,
+  "valid_to": null,
+  "belongs_to_service": "service_red_line",
+  "conflicts_with": [],
+  "status": "draft",
+  "source": "manual",
+  "version": 1,
+  "updated_at": "2026-09-12T00:00:00Z",
+  "languages_present": ["en", "ar"],
+  "attributes": {
+    "febra_family": "Line",
+    "review_note": "HAND-AUTHORED from the FEBRA Line files ('RED packages balance' note in the English file; the Arabic FAQ). Split out of service_red_line on 2026-09-12: that entity's description covered balance, multipliers, apps, family sharing, calls and internet at once, which made it a semantic magnet — a 2026-09-12 probe had it ranking #1 for 'cheapest tiktok package?' and 'what is my current balance?'. One topic per entity retrieves better. ⚠ Modelled as `terminology` because it defines a concept rather than describing a purchasable thing; the vocab has no better type. ⚠ No ckb/kmr copy — the sources state this only in English and Arabic, and machine translation was not substituted (docs/21)."
+  }
+}

@@ -39,7 +39,7 @@ docker compose up -d tei
 # 3. Ollama — check it is up; start it only if not
 curl http://127.0.0.1:11434/api/tags
 
-# 4. Load the data into Qdrant (~2.5 min; see the warning below about --rebuild)
+# 4. Load the data into Qdrant (~2.2 min; see the warning below about --rebuild)
 npm run ingest:rebuild
 
 # 5. The service — own terminal, leave it running
@@ -52,7 +52,7 @@ curl http://127.0.0.1:8090/healthz
 A healthy system answers:
 
 ```json
-{"ok":true,"qdrant":true,"tei":true,"llm":true,"collection":"laila_knowledge","points":402}
+{"ok":true,"qdrant":true,"tei":true,"llm":true,"collection":"laila_knowledge","points":409}
 ```
 
 and the service prints:
@@ -126,6 +126,7 @@ Rebuild whenever:
 | `LLM_TIMEOUT_MS` | `240000` | **Not optional.** This CPU runs the 3B model at ~9 tok/s |
 | `LLM_REWRITE_TIMEOUT_MS` | `90000` | Same reason |
 | `SERVICE_TOKEN` | *(set)* | Auth. An unset token would disable the gate — see [[Safety and security]] |
+| `ANSWER_RELEVANCE_FLOOR` | default `0.55` | Below this cosine relevance `/v1/answer` declines instead of composing. `0` disables it — see [[Evaluation]] |
 
 > [!warning] The timeouts are not cosmetic
 > At the hosted defaults (60 s / 15 s) generation expires mid-answer and **every question
@@ -142,9 +143,9 @@ The committed `docker-compose.yml` also carries `--max-client-batch-size 32`,
 | | |
 |---|---|
 | Single embed (TEI) | ~84 ms |
-| Full rebuild, 73 entities | ~138 s |
+| Full rebuild, 75 entities | ~132 s |
 | Unit suite | ~150 s |
 | Eval run | ~4 min |
-| Index | 73 entities / 402 chunks |
+| Index | 75 entities / 409 chunks |
 
 Related: [[Troubleshooting]] · [[Architecture]] · [[Endpoints]]

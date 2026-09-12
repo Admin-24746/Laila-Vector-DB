@@ -42,6 +42,16 @@ Contract: `docs/08`. Base `http://127.0.0.1:8090`. Every `/v1/*` call needs
 `grounded_facts` is the machine-readable answer — use it rather than parsing prose. It comes
 from the top result's payload, so it is only as good as the entity behind it.
 
+> [!danger] `score` is not a confidence. `relevance` is.
+> `score` is a fused **rank** score (RRF). It orders the list well and says nothing about
+> whether anything in the list is relevant: *"what is Eshrat Omar?"* — a programme the corpus
+> only ever names — came back at **score 1.00**. Threshold on **`relevance`** (raw cosine) or
+> on the response's **`max_relevance`**.
+>
+> Measured 2026-09-12 over 17 probes: answerable questions **0.588–0.740**, questions the
+> corpus cannot answer **0.346–0.610**. That is the separation the floor uses, and it is
+> genuinely tight at the boundary — treat it as a gate, not a truth.
+
 ## `POST /v1/route`
 
 ```jsonc
@@ -61,6 +71,20 @@ filter and leak guard. Also accepts `history` (OpenAI-style turns) for follow-up
 > [!warning] A 200 from `/v1/answer` is not proof the LLM worked
 > When the LLM is misconfigured or times out, the endpoint returns **200 with the safe
 > fallback**, not an error. Check the banner and the timeouts — see [[Troubleshooting]].
+
+> [!important] `grounded: true` does not mean "answered"
+> An honest "I don't have that detail" is grounded. **`abstained: true`** is the flag that
+> says the service declined. Three things can raise it: nothing retrieved, the relevance
+> floor firing, or — separately — the guardrail blocking, which shows as `grounded: false`.
+>
+> A caller that wants to escalate to a human should look at `abstained` and `grounded`
+> together, not at `grounded` alone.
+
+**The relevance gate.** Before composing, `/v1/answer` checks `max_relevance` against
+`CONFIG.answerRelevanceFloor` (default 0.55). Below it, the service answers from a fixed
+message and **never calls the LLM** — there is nothing for the model to invent from. This
+exists because a 3B model, handed five irrelevant chunks, invented the same false definition
+three runs out of three ([[Safety and security]]).
 
 The response carries a `guardrail` block. `violations` can contain bare digits,
 `misattributed_number` or `unsupported_magnitude`. A `grounded: false` answer means the

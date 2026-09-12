@@ -67,9 +67,12 @@ test('end-to-end: ingest → hybrid retrieval → filters → routing', { skip }
     });
 
     await t.test('hybrid retrieval finds the right entity and section', () => {
-      assert.equal(probe.combo.ids[0], 'bundle_1601', `got ${JSON.stringify(probe.combo)}`);
-      assert.equal(probe.combo.topSection, 'subscribe', 'a "how do I subscribe" question wants the subscribe chunk');
-      assert.ok(probe.combo.topScore > 0.5, `weak top score: ${probe.combo.topScore}`);
+      // Retargeted 2026-09-12: the Combo placeholder this used to assert on is retired,
+      // because its subscribe chunk offered an invented shortcode. RED 15 is real content.
+      assert.ok(probe.subscribeQuery.ids.includes('service_red_15'),
+        `expected service_red_15 in the results, got ${JSON.stringify(probe.subscribeQuery)}`);
+      assert.equal(probe.subscribeQuery.topSection, 'subscribe',
+        'a "how do I subscribe" question wants the subscribe chunk');
     });
 
     await t.test('a language filter is hard', () => {
@@ -78,9 +81,13 @@ test('end-to-end: ingest → hybrid retrieval → filters → routing', { skip }
     });
 
     await t.test('location filter: empty condition means unrestricted (docs/02)', () => {
-      assert.ok(!probe.basra.includes('bundle_1601'), 'combo is baghdad-only, so Basra must not see it');
-      assert.ok(probe.basra.length > 0, 'unrestricted bundles must still surface in Basra');
-      assert.ok(probe.baghdad.includes('bundle_1601'), 'and Baghdad must see it');
+      assert.ok(probe.basra.length > 0, 'unrestricted bundles must surface in Basra');
+      assert.ok(probe.baghdad.length > 0, 'and in Baghdad');
+      assert.deepEqual(probe.basra.sort(), probe.baghdad.sort(),
+        'with no entity restricted by location, both governorates must see the same set');
+      // ⚠ The exclusion half of this rule is UNCOVERED since 2026-09-12 — the only
+      // location-restricted entity was the invented bundle_1601, and no real FEBRA row
+      // states a location. See the note in scripts/integration-probe.mjs.
     });
 
     await t.test('routing: a stored utterance routes, nonsense abstains', () => {

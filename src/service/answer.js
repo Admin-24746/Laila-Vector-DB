@@ -3,9 +3,11 @@
 // price/fee; every number in the answer must literally exist in the provided evidence.
 
 import { chat } from '../lib/llm.js';
+import { CONFIG } from '../lib/config.js';
 import { normalizeDigits } from '../lib/normalize.js';
+import { maxRelevance } from './retrieve.js';
 import {
-  ANSWER_SYSTEM, STRICT_RETRY_NOTE, NOT_FOUND, SAFE_FALLBACK, languageName, ANSWER_PROMPT_VERSION,
+  ANSWER_SYSTEM, STRICT_RETRY_NOTE, NOT_FOUND, LOW_RELEVANCE, SAFE_FALLBACK, languageName, ANSWER_PROMPT_VERSION,
   PROMPT_LEAK_MARKERS,
 } from './prompts.js';
 
@@ -133,6 +135,59 @@ export function promptLeakViolations(answer) {
     .map((m) => `prompt_leak: "${m.slice(0, 30)}…"`);
 }
 
+// Solicitation guard (added 2026-09-12). The number guardrail has no opinion on a claim
+// that contains no numbers, and a probe found the model answering "what is my current
+// balance?" with "Please provide your login credentials so I can assist you further" and
+// "I would need your phone number or account details. Could you please provide that?".
+//
+// Both are wrong for the same reason: this service has NO account access, so nothing it
+// collects could help — and a customer-service bot asking for a password is phishing-shaped
+// whether or not anyone meant it that way. docs/17 §6 is explicit that prompt rules are not
+// absolute on a 3B model, so this is enforced in code as well as in the prompt.
+//
+// The bounds are deliberate: a request word must sit within 60 characters of the secret,
+// which keeps backtracking linear (the audit checked the safety regexes for ReDoS and this
+// one follows the same rule) and stops an answer that merely NAMES a field from tripping it.
+const SECRET = 'password|passcode|pass code|pin code|\\bpin\\b|\\botp\\b|one[- ]time code|verification code|security code|credentials?|card number|cvv'
+  + '|كلمة السر|كلمة المرور|الرقم السري|رمز التحقق|رمز الأمان'
+  + '|وشەی نهێنی|کۆدی پشتڕاستکردنەوە';
+const PERSONAL = 'phone number|mobile number|account number|account details|msisdn|sim serial'
+  + '|رقم الهاتف|رقم الموبايل|رقم الحساب|تفاصيل الحساب|معلومات حسابك'
+  + '|ژمارەی مۆبایل|ژمارەی هەژمار';
+const ASK = 'provide|share|send me|give me|tell me|enter|type|confirm your|need your|require your|could you|can you|please'
+  + '|زودني|اعطني|أعطني|ارسل|أرسل|اكتب|تزويدي|احتاج|أحتاج|يرجى|الرجاء'
+  + '|پێم بدە|بنێرە|بنووسە|پێویستم';
+
+// A request word on either side of the sensitive term, within 60 chars.
+const near = (what) => new RegExp(`(?:${ASK})[^.!?\\n]{0,60}?(?:${what})|(?:${what})[^.!?\\n]{0,60}?(?:${ASK})`, 'i');
+const ASKS_SECRET = near(SECRET);
+const ASKS_PERSONAL = near(PERSONAL);
+
+// Internal plumbing must never reach a customer. Observed: "I don't have the specific
+// details of your current balance for the bundle with ID 2632" — a payload field leaking
+// into customer-facing prose. Use the product's NAME instead.
+const INTERNAL_ID = /\bbundle\s?_?id\b|\bentity[_\s]?id\b|\bchunk[_\s]?id\b|\bID\s*[:#]?\s*\d{3,}/i;
+
+/**
+ * Is the best evidence too weak to compose over? Exported so the decision can be tested
+ * without paying for an LLM round trip.
+ *
+ * `null` means "no cosine score for this result set" — a chunk the fusion surfaced from the
+ * lexical side can fall outside the dense window. Treating that as 0 would silently discard
+ * exactly the matches hybrid search exists to find, so unknown falls through to the model.
+ */
+export function belowRelevanceFloor(relevance, floor = CONFIG.answerRelevanceFloor) {
+  return floor > 0 && typeof relevance === 'number' && relevance < floor;
+}
+
+export function solicitationViolations(answer) {
+  const violations = [];
+  if (ASKS_SECRET.test(answer)) violations.push('credential_request: the answer asks the customer for a secret');
+  if (ASKS_PERSONAL.test(answer)) violations.push('personal_data_request: the answer asks for account details it cannot use');
+  if (INTERNAL_ID.test(answer)) violations.push('internal_id_leak: an internal identifier reached the answer');
+  return violations;
+}
+
 function buildSystem({ results, facts, language }) {
   const context = results.map((r) => `- (${r.chunk_id}) ${r.text}`).join('\n') || '(empty)';
   const factsJson = Object.keys(facts).length ? JSON.stringify(facts) : '(none)';
@@ -153,8 +208,31 @@ export async function composeAnswer({ question, results, facts, language }) {
     return {
       answer: NOT_FOUND[language] ?? NOT_FOUND.en,
       grounded: true,
+      abstained: true,
       citations: [],
       guardrail: { retried: false, blocked: false, violations: [] },
+    };
+  }
+
+  // Relevance gate (added 2026-09-12). Retrieval ALWAYS returns its best top_k, so "nothing
+  // retrieved" is almost never the shape of an unanswerable question — "what is Eshrat
+  // Omar?" came back with five chunks and a fused score of 1.00 for a programme the corpus
+  // only ever names. Composing over that is what produced a confident invented definition,
+  // three runs out of three. Cosine relevance separates the two cases where the fused score
+  // cannot, so a question whose best evidence is not about it never reaches the model.
+  const relevance = maxRelevance(results);
+  if (belowRelevanceFloor(relevance)) {
+    return {
+      answer: LOW_RELEVANCE[language] ?? LOW_RELEVANCE.en,
+      grounded: true,
+      abstained: true,
+      citations: [],
+      guardrail: {
+        retried: false,
+        blocked: true,
+        relevance,
+        violations: [`below_relevance_floor: ${relevance.toFixed(3)} < ${CONFIG.answerRelevanceFloor}`],
+      },
     };
   }
 
@@ -172,7 +250,8 @@ export async function composeAnswer({ question, results, facts, language }) {
   const problems = (a) => {
     if (typeof a !== 'string') return [`llm_error: ${a.error}`];
     if (!a.trim()) return ['empty_answer'];
-    return [...unsupportedNumbers(a, results, facts), ...promptLeakViolations(a), ...scriptViolations(a)];
+    return [...unsupportedNumbers(a, results, facts), ...promptLeakViolations(a),
+      ...scriptViolations(a), ...solicitationViolations(a)];
   };
 
   let answer = await attempt(system, { temperature: 0.2 });

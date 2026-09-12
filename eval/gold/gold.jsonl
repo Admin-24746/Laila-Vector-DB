@@ -1,42 +1,45 @@
-{"query": "extra fee if I get Combo 3 times this month?", "language": "en", "expected_chunk": "bundle_1601::fees_edgecases::en", "expected_flow": "knowledge_flow", "gold_answer": "Yes — a 2,500 IQD fee applies from the 3rd subscription in the same month."}
-{"query": "what do I get with the combo bundle?", "language": "en", "expected_chunk": "bundle_1601::overview::en", "expected_flow": "knowledge_flow", "gold_answer": "4 weeks: 500 on-net minutes, 25 on-net SMS, 25 off-net minutes/SMS, 300 MB for 5,000 IQD."}
-{"query": "how do I cancel my combo subscription?", "language": "en", "expected_chunk": "bundle_1601::unsubscribe::en", "expected_flow": "knowledge_flow", "gold_answer": "Send STOP COMBO to 1234 or dial *123#; no cancellation fee."}
-{"query": "can Yooz lines get the combo bundle?", "language": "en", "expected_chunk": "bundle_1601::eligibility::en", "expected_flow": "knowledge_flow", "gold_answer": "No — Combo is available to the Red service class, Baghdad only."}
-{"query": "is combo available outside baghdad?", "language": "en", "expected_chunk": "bundle_1601::eligibility::en", "expected_flow": "knowledge_flow", "gold_answer": "No — Combo is Baghdad-only."}
-{"query": "شلون الغي باقة كومبو؟", "language": "ar", "expected_chunk": "bundle_1601::unsubscribe::ar", "expected_flow": "knowledge_flow", "gold_answer": "أرسل STOP COMBO إلى 1234 أو اطلب *123#، بدون رسوم إلغاء."}
-{"query": "بيش باقة كومبو وشنو بيها؟", "language": "ar", "expected_chunk": "bundle_1601::overview::ar", "expected_flow": "knowledge_flow", "gold_answer": "5,000 دينار لمدة 4 أسابيع: 500 دقيقة داخل الشبكة، 25 رسالة، 25 دقيقة/رسالة خارج الشبكة، 300 ميغابايت."}
-{"query": "اكو رسوم اذا اشتركت بكومبو ثلث مرات بنفس الشهر؟", "language": "ar", "expected_chunk": "bundle_1601::fees_edgecases::ar", "expected_flow": "knowledge_flow", "gold_answer": "نعم — رسوم إضافية 2,500 دينار من الاشتراك الثالث بنفس الشهر."}
-{"query": "كومبو متوفرة بس ببغداد لو بكل العراق؟", "language": "ar", "expected_chunk": "bundle_1601::eligibility::ar", "expected_flow": "knowledge_flow", "gold_answer": "متوفرة في بغداد فقط."}
-{"query": "شلون اشترك بكومبو؟", "language": "ar", "expected_chunk": "bundle_1601::subscribe::ar", "expected_flow": "knowledge_flow", "gold_answer": "اطلب *123*1# أو أرسل COMBO إلى 1234."}
-{"query": "پاکێجی کۆمبۆ چی تێدایە؟", "language": "ckb", "expected_chunk": "bundle_1601::overview::ckb", "expected_flow": "knowledge_flow", "gold_answer": "بۆ 4 هەفتە: 500 خولەک ناو تۆڕ، 25 نامە، 25 خولەک/نامە دەرەوەی تۆڕ، 300 مێگابایت بە 5,000 دینار."}
-{"query": "چۆن بەشداری کۆمبۆ هەڵدەوەشێنمەوە؟", "language": "ckb", "expected_chunk": "bundle_1601::unsubscribe::ckb", "expected_flow": "knowledge_flow", "gold_answer": "STOP COMBO بنێرە بۆ 1234 یان *123# لێبدە."}
-{"query": "ئەگەر سێ جار لە مانگێکدا بەشداری کۆمبۆ بکەم تێچووی زیادە هەیە؟", "language": "ckb", "expected_chunk": "bundle_1601::fees_edgecases::ckb", "expected_flow": "knowledge_flow", "gold_answer": "بەڵێ — 2,500 دینار لە بەشداری سێیەمەوە لە هەمان مانگ."}
-{"query": "کۆمبۆ لە هەولێر بەردەستە؟", "language": "ckb", "expected_chunk": "bundle_1601::eligibility::ckb", "expected_flow": "knowledge_flow", "gold_answer": "نەخێر — تەنها لە بەغدا بەردەستە."}
-{"query": "Pakêja Combo çi dide?", "language": "kmr", "expected_chunk": "bundle_1601::overview::kmr", "expected_flow": "knowledge_flow", "gold_answer": "Ji bo 4 hefteyan: 500 deqîqe nav torê, 25 SMS, 25 deqîqe/SMS derveyî torê, 300 MB bi 5,000 dînarî."}
-{"query": "Çawa Combo betal bikim?", "language": "kmr", "expected_chunk": "bundle_1601::unsubscribe::kmr", "expected_flow": "knowledge_flow", "gold_answer": "STOP COMBO bişîne bo 1234 yan *123# bigire."}
-{"query": "cawa combo betal bikim", "language": "kmr", "expected_chunk": "bundle_1601::unsubscribe::kmr", "expected_flow": "knowledge_flow", "gold_answer": "(romanized, no diacritics) STOP COMBO bişîne bo 1234.", "note": "romanized-Kurdish risk slice (D5)"}
-{"query": "Eger sê caran di mehekê de Combo bikirim xerca zêde heye?", "language": "kmr", "expected_chunk": "bundle_1601::fees_edgecases::kmr", "expected_flow": "knowledge_flow", "gold_answer": "Erê — 2,500 dînar ji abonetiya 3emîn di heman mehê de."}
-{"query": "how much is the monthly 10GB internet bundle?", "language": "en", "expected_chunk": "bundle_1602::overview::en", "expected_flow": "knowledge_flow", "gold_answer": "Super Net Monthly: 10 GB for 30 days, 10,000 IQD."}
-{"query": "بيش باقة سوبر نت الشهرية؟", "language": "ar", "expected_chunk": "bundle_1602::overview::ar", "expected_flow": "knowledge_flow", "gold_answer": "10,000 دينار — 10 جيجابايت لمدة 30 يوم."}
-{"query": "پاکێجی سوپەر نێتی مانگانە بە چەندە؟", "language": "ckb", "expected_chunk": "bundle_1602::overview::ckb", "expected_flow": "knowledge_flow", "gold_answer": "10,000 دینار — 10 گێگابایت بۆ 30 ڕۆژ."}
-{"query": "Super Net a mehane bi çend e?", "language": "kmr", "expected_chunk": "bundle_1602::overview::kmr", "expected_flow": "knowledge_flow", "gold_answer": "10,000 dînar — 10 GB ji bo 30 rojan."}
-{"query": "can I have super net and weekly net at the same time?", "language": "en", "expected_chunks": ["bundle_1602::conflicts::en", "bundle_1603::conflicts::en"], "expected_flow": "knowledge_flow", "gold_answer": "No — Super Net Monthly and Weekly Net conflict; you cannot combine them."}
-{"query": "اكو باقة نت اسبوعية؟", "language": "ar", "expected_chunk": "bundle_1603::overview::ar", "expected_flow": "knowledge_flow", "gold_answer": "نعم — نت الأسبوع: 2 جيجابايت لمدة 7 أيام بـ3,000 دينار."}
-{"query": "what is the weekly internet bundle?", "language": "en", "expected_chunk": "bundle_1603::overview::en", "expected_flow": "knowledge_flow", "gold_answer": "Weekly Net: 2 GB for 7 days, 3,000 IQD."}
-{"query": "what is shukran?", "language": "en", "expected_chunk": "service_shukran::overview::en", "expected_flow": "knowledge_flow", "gold_answer": "(PLACEHOLDER) Shukran is Asiacell's rewards program."}
-{"query": "شنو خدمة شكراً؟", "language": "ar", "expected_chunk": "service_shukran::overview::ar", "expected_flow": "knowledge_flow", "gold_answer": "(نص مؤقت) شكراً هو برنامج مكافآت أسياسيل."}
-{"query": "what does service class mean?", "language": "en", "expected_chunk": "terminology_line::definition::en", "expected_flow": "knowledge_flow", "gold_answer": "The base tariff plan a SIM is on (e.g. Red, Yooz); it determines bundle eligibility."}
-{"query": "شنو يعني فئة الخدمة؟", "language": "ar", "expected_chunk": "terminology_line::definition::ar", "expected_flow": "knowledge_flow", "gold_answer": "خطة التعرفة الأساسية للشريحة (مثل رد أو يوز) وتحدد أهلية الباقات."}
-{"query": "can you lend me some balance please", "language": "en", "expected_flow": "loan_flow"}
-{"query": "ممكن سلفة رصيد؟", "language": "ar", "expected_flow": "loan_flow"}
-{"query": "خلص رصيدي، اريد قرض حتى اعبي", "language": "ar", "expected_flow": "loan_flow"}
-{"query": "دەکرێت قەرزێکی باڵانسم بدەیتێ؟", "language": "ckb", "expected_flow": "loan_flow"}
-{"query": "Tu dikarî balansê bidî min deyn?", "language": "kmr", "expected_flow": "loan_flow"}
-{"query": "شنو عروضي الخاصة؟", "language": "ar", "expected_flow": "btl_flow"}
-{"query": "any offers on my number?", "language": "en", "expected_flow": "btl_flow"}
-{"query": "my data stopped working since this morning", "language": "en", "expected_flow": "complaint_flow"}
-{"query": "هیچ ئینتەرنێتم نییە لە ماڵەوە", "language": "ckb", "expected_flow": "complaint_flow"}
-{"query": "وين اقرب مكتب اسياسيل بالبصرة؟", "language": "ar", "expected_flow": "shop_locator_flow"}
-{"query": "Li Duhok şaxa we heye?", "language": "kmr", "expected_flow": "shop_locator_flow"}
-{"query": "bundle", "language": "en", "expected_flow": "__clarify__", "note": "one bare word — router must abstain, never guess (docs/06 §5)"}
-{"query": "عروض", "language": "ar", "expected_flow": "__clarify__", "note": "ambiguous between btl_flow and knowledge_flow"}
+{"query":"how much is the daily unlimited 4G?","language":"en","expected_chunk":"bundle_2017::overview::en","gold_answer":"Unlimited internet for 24 hours for 3,000 IQD. A fair-use policy applies after 3 GB, and it does not auto-renew.","expected_flow":"knowledge_flow"}
+{"query":"شكد سعر باقة الانترنت اليومية غير المحدودة؟","language":"ar","expected_chunk":"bundle_2017::overview::ar","gold_answer":"انترنت غير محدود لمدة 24 ساعة بـ 3,000 دينار، وتُطبق سياسة الاستخدام العادل بعد 3 جيجابايت.","expected_flow":"knowledge_flow"}
+{"query":"how many GB do I get with Daily Unlimited 4G?","language":"en","expected_chunk":"bundle_2017::overview::en","gold_answer":"It is unlimited for 24 hours rather than a fixed allowance; the fair-use policy starts after 3 GB.","expected_flow":"knowledge_flow"}
+{"query":"how much is the weekly tiktok bundle?","language":"en","expected_chunk":"bundle_1684::overview::en","gold_answer":"The Weekly TikTok bundle is 2,500 IQD for 1 GB, valid 7 days.","expected_flow":"knowledge_flow"}
+{"query":"شكد سعر باقة تيك توك الاسبوعية؟","language":"ar","expected_chunk":"bundle_1684::overview::ar","gold_answer":"باقة تيك توك الاسبوعية 2,500 دينار، 1 جيجابايت، لمدة 7 أيام.","expected_flow":"knowledge_flow"}
+{"query":"نرخی پاکێجی تیک تۆکی هەفتانە چەندە؟","language":"ckb","expected_chunk":"bundle_1684::overview::ckb","gold_answer":"پاکێجی تیک تۆکی هەفتانە 2,500 دینارە، 1 گێگابایت، بۆ 7 ڕۆژ.","expected_flow":"knowledge_flow"}
+{"query":"what do I get with Elna Weekly?","language":"en","expected_chunk":"bundle_1000::overview::en","gold_answer":"100 MB, 60 minutes to Asiacell and 15 SMS for 3,000 IQD, valid 7 days, auto-renewing.","expected_flow":"knowledge_flow"}
+{"query":"شنو تجيب باقة النا الاسبوعية؟","language":"ar","expected_chunk":"bundle_1000::overview::ar","gold_answer":"100 ميغابايت و60 دقيقة داخل اسياسيل و15 رسالة بـ 3,000 دينار لمدة 7 أيام.","expected_flow":"knowledge_flow"}
+{"query":"شكد سعر ماكس كارد 12000؟","language":"ar","expected_chunk":"bundle_2335::overview::ar","gold_answer":"ماكس كارد 12,000 دينار: 5 جيجابايت و180 دقيقة لجميع الشبكات و50 رسالة لمدة 7 أيام.","expected_flow":"knowledge_flow"}
+{"query":"what does Max Card 12,000 include?","language":"en","expected_chunk":"bundle_2335::overview::en","gold_answer":"5 GB, 180 minutes to all networks and 50 SMS for 12,000 IQD, valid 7 days.","expected_flow":"knowledge_flow"}
+{"query":"what apps are free on the weekly free social 3 GB?","language":"en","expected_chunk":"bundle_1026::overview::en","gold_answer":"Viber, WhatsApp and Facebook, with 3 GB for 5,000 IQD over 7 days.","expected_flow":"knowledge_flow"}
+{"query":"اكو باقة فري سوشيال اسبوعية؟","language":"ar","expected_chunk":"bundle_1026::overview::ar","gold_answer":"نعم، فري سوشيال الاسبوعية 3 جيجابايت بـ 5,000 دينار لمدة 7 أيام مع استخدام مجاني لفايبر وواتساب وفيسبوك.","expected_flow":"knowledge_flow"}
+{"query":"how much data is in Yooz 25 Mix?","language":"en","expected_chunk":"bundle_2641::overview::en","gold_answer":"10 GB, with 400 minutes and 500 SMS, for 25,000 IQD over 4 weeks.","expected_flow":"knowledge_flow"}
+{"query":"do I need a Yooz line for the Yooz 25 Mix bundle?","language":"en","expected_chunk":"bundle_2641::eligibility::en","gold_answer":"Yes — Yooz bundles are available to Yooz service class lines.","expected_flow":"knowledge_flow"}
+{"query":"what is RED line?","language":"en","expected_chunk":"service_red_line::overview::en","gold_answer":"An Asiacell line type with up to a 4.5x balance multiplier, free social media apps, shareable family plans and Eshrat Omar offers.","expected_flow":"knowledge_flow"}
+{"query":"شنو خط RED؟","language":"ar","expected_chunk":"service_red_line::overview::ar","gold_answer":"خط من آسيا سيل يمنح أضعاف الرصيد تصل إلى 4.5x مع تطبيقات سوشيال ميديا مشمولة وباقات عائلية.","expected_flow":"knowledge_flow"}
+{"query":"how do I switch to RED?","language":"en","expected_chunk":"service_red_line::subscribe::en","gold_answer":"Through the Asiacell App, by dialling *230#, or by calling 200. New subscribers can get one at any Asiacell sales channel.","expected_flow":"knowledge_flow"}
+{"query":"شلون احول خطي الى RED؟","language":"ar","expected_chunk":"service_red_line::subscribe::ar","gold_answer":"عبر تطبيق آسيا سيل أو بالاتصال بالرمز *230#.","expected_flow":"knowledge_flow"}
+{"query":"how do I subscribe to RED 15?","language":"en","expected_chunk":"service_red_15::subscribe::en","gold_answer":"Asiacell App, send 3 to 230, or dial *230#.","expected_flow":"knowledge_flow"}
+{"query":"شلون اشترك بباقة RED 5؟","language":"ar","expected_chunk":"service_red_5::subscribe::ar","gold_answer":"عبر تطبيق آسيا سيل أو إرسال 1 إلى 230 أو الاتصال بـ *230#.","expected_flow":"knowledge_flow"}
+{"query":"چۆن بەشداری RED 5 بکەم؟","language":"ckb","expected_chunk":"service_red_5::subscribe::ckb","gold_answer":"لەڕێی ئەپڵیکەیشنی ئاسیاسێڵ یان ناردنی 1 بۆ 230 یان *230#.","expected_flow":"knowledge_flow"}
+{"query":"what does RED 15 give me?","language":"en","expected_chunk":"service_red_15::overview::en","gold_answer":"45,000 IQD of balance, 200 free SMS and free Facebook, WhatsApp, Instagram and Snapchat for 15,000 IQD over 4 weeks.","expected_flow":"knowledge_flow"}
+{"query":"can I use my RED balance to buy an internet bundle?","language":"en","expected_chunk":"terminology_red_balance::definition::en","gold_answer":"No — RED package balance covers calls, SMS and per-MB internet usage only, not buying bundles.","expected_flow":"knowledge_flow"}
+{"query":"اذا الغيت باقة RED يرجع الرصيد المتبقي؟","language":"ar","expected_chunk":"terminology_red_balance::definition::ar","gold_answer":"لا، الرصيد غير المستخدم غير قابل للاسترجاع ولا يعود إلى الرصيد الأساسي عند إلغاء الباقة.","expected_flow":"knowledge_flow"}
+{"query":"كم تعرفة المكالمات بخط RED اذا ما عندي باقة؟","language":"ar","expected_chunk":"terminology_red_tariff::definition::ar","gold_answer":"1.5 دينار للثانية في الموصل وكركوك وأربيل والسليمانية ودهوك، و2.8 دينار للثانية في باقي المحافظات، والرسالة 50 دينار.","expected_flow":"knowledge_flow"}
+{"query":"شلون الغي باقة RED؟","language":"ar","expected_chunk":"service_red_line::unsubscribe::ar","gold_answer":"بإرسال الرقم 0 إلى 230. إدارة الباقات تتم عبر تطبيق آسيا سيل.","expected_flow":"knowledge_flow"}
+{"query":"پاکێجی ئەنتەرنێتی بێ سنووری رۆژانە چەندە؟","language":"ckb","expected_chunk":"bundle_2017::overview::ckb","gold_answer":"ئەنتەرنێت بێ سنوور بۆ 24 کاتژێر بە 3,000 دینار، سیاسەتی بەکارهێنانی دادپەروەرانە پاش 3 گێگابایت.","expected_flow":"knowledge_flow"}
+{"query":"فري سۆشیاڵ هەفتانە کام ئەپڵیکەیشن خۆرایی دەکات؟","language":"ckb","expected_chunk":"bundle_1026::overview::ckb","gold_answer":"Viber و WhatsApp و Facebook، 3 گێگابایت بە 5,000 دینار بۆ 7 ڕۆژ.","expected_flow":"knowledge_flow"}
+{"query":"پاکێجی بۆ ئێمە هەفتانە چی تێدایە؟","language":"ckb","expected_chunk":"bundle_1000::overview::ckb","gold_answer":"60 خولەک بۆ ناو تۆری ئاسیاسێڵ، 100 مێگابایت و 15 کورتەنامە بە 3,000 دینار.","expected_flow":"knowledge_flow"}
+{"query":"نرخی ماكس كارد 12 هەفتانە چەندە؟","language":"ckb","expected_chunk":"bundle_2335::overview::ckb","gold_answer":"12,000 دینار: 5 گێگابایت، 180 خولەک بۆ سەرجەم تۆرەکان و 50 کورتەنامە.","expected_flow":"knowledge_flow"}
+{"query":"خەتی RED چییە؟","language":"ckb","expected_chunk":"service_red_line::overview::ckb","gold_answer":"هێڵێکی نوێی ئاسیاسێڵە کە چەند هێندە باڵانس دەگاتە 4.5 لەگەڵ سۆشیاڵ میدیای بێبەرامبەر و پاکێجی خێزانی.","expected_flow":"knowledge_flow"}
+{"query":"can I have super net and weekly net at the same time?","language":"en","expected_chunks":["bundle_1602::conflicts::en","bundle_1603::conflicts::en"],"expected_flow":"knowledge_flow","gold_answer":"No — Super Net Monthly and Weekly Net conflict; you cannot combine them."}
+{"query":"can you lend me some balance please","language":"en","expected_flow":"loan_flow"}
+{"query":"ممكن سلفة رصيد؟","language":"ar","expected_flow":"loan_flow"}
+{"query":"خلص رصيدي، اريد قرض حتى اعبي","language":"ar","expected_flow":"loan_flow"}
+{"query":"دەکرێت قەرزێکی باڵانسم بدەیتێ؟","language":"ckb","expected_flow":"loan_flow"}
+{"query":"Tu dikarî balansê bidî min deyn?","language":"kmr","expected_flow":"loan_flow"}
+{"query":"شنو عروضي الخاصة؟","language":"ar","expected_flow":"btl_flow"}
+{"query":"any offers on my number?","language":"en","expected_flow":"btl_flow"}
+{"query":"my data stopped working since this morning","language":"en","expected_flow":"complaint_flow"}
+{"query":"هیچ ئینتەرنێتم نییە لە ماڵەوە","language":"ckb","expected_flow":"complaint_flow"}
+{"query":"وين اقرب مكتب اسياسيل بالبصرة؟","language":"ar","expected_flow":"shop_locator_flow"}
+{"query":"Li Duhok şaxa we heye?","language":"kmr","expected_flow":"shop_locator_flow"}
+{"query":"bundle","language":"en","expected_flow":"__clarify__","note":"one bare word — router must abstain, never guess (docs/06 §5)"}
+{"query":"عروض","language":"ar","expected_flow":"__clarify__","note":"ambiguous between btl_flow and knowledge_flow"}

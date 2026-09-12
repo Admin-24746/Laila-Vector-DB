@@ -25,9 +25,14 @@ Config: copy `.env.example` → `.env` (defaults work locally).
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /v1/retrieve` | knowledge retrieval — `{text, language?, filters?{location,service_class}, top_k?, expand?}` → chunks + `grounded_facts` + `bucket_hint` |
+| `POST /v1/retrieve` | knowledge retrieval — `{text, language?, filters?{location,service_class}, top_k?, expand?}` → chunks + `grounded_facts` + `bucket_hint` + `max_relevance` |
 | `POST /v1/route` | semantic router — `{text}` → `{flow, confidence, action: route\|clarify\|fallback, reason}` |
-| `POST /v1/answer` | retrieve + LLM compose (docs/15 prompt) + number-grounding guardrail (docs/08 §3) + injection filter & leak-guard (docs/17) |
+| `POST /v1/answer` | retrieve + relevance gate + LLM compose (docs/15 prompt) + number-grounding guardrail (docs/08 §3) + solicitation guard + injection filter & leak-guard (docs/17) → adds `abstained` |
+
+> ⚠️ **Per-chunk `score` is a fused RANK score, not a confidence** — an irrelevant chunk can
+> score 1.00. Threshold on **`relevance`** (raw cosine) or the response's `max_relevance`.
+> And `grounded: true` does not mean "answered": an honest "I don't have that detail" is
+> grounded, so check **`abstained`** to tell the two apart.
 | `GET /healthz` | stack health + point count |
 
 ## Layout
@@ -58,22 +63,104 @@ logs/            service audit log JSONL (gitignored)
 Asiacell bundles.** Both audit passes are fully fixed — the 2026-08-21 blocking findings in
 `ab98c99`, and all nine remaining 2026-08-22 findings in `9d4e62b`, each pinned by a
 regression test in `test/audit-round2.test.js`. Branch `fix/audit-blocking-issues` is
-**pushed** (2026-09-12). `npm test` = **179 tests, 179 pass / 0 fail**. `npm audit` = **0
+**pushed** (2026-09-12). `npm test` = **190 tests, 190 pass / 0 fail**. `npm audit` = **0
 vulnerabilities** after a fresh `npm audit fix` on 2026-09-10: new `fast-uri`
 SSRF/host-confusion advisories and a `fastify` schema-validation bypass had landed since
 August, so **fastify is now 5.12.3** (re-verified: full suite green, endpoints unchanged).
 **What remains of the content work is the half that needs a human: the log export, and the
 facts the FEBRA export does not carry.**
 
+### 🔬 What an end-to-end usefulness probe found, and the four fixes (2026-09-12)
+
+48 retrieval probes, 15 answer probes and 6 routing probes against real customer phrasings,
+each judged against the seed data. **Retrieval was good; the answer layer was not safe.**
+Fact lookup was correct in all three languages at 80–160 ms, and `grounded_facts` was right
+every time. Four things were wrong, all now fixed and pinned:
+
+**1. The invented placeholders were poisoning retrieval, measurably.** Over 24 realistic
+queries they ranked **#1 on 6 (25%)** and appeared in the top 3 on **11 (46%)** — they beat
+the 50 real bundles because they were the only entities with *both* aliases and `how_to`, so
+they were the richest documents in the index. Worst case: *"how do I subscribe to Weekly
+TikTok?"* returned `bundle_1603::subscribe::en` at fused score **1.00**, offering the
+**invented** code `dial *321*2# or send NET2 to 1234`. `bundle_1601/1602/1603`,
+`service_shukran` and `terminology_line` are now **`status: retired`** (excluded by
+`buildFilter`, kept on disk for the record). After: **0 of 24**, at #1 and in the top 3.
+
+**2. `score` was the only signal, and it is not a confidence.** `/v1/retrieve` uses RRF rank
+fusion, so an irrelevant chunk that happens to rank first in both lists scores 1.00 — *"what
+is Eshrat Omar?"*, a programme the corpus only ever names, came back at **1.00**. Results now
+carry **`relevance`** (raw cosine) alongside `score`, and the response carries
+**`max_relevance`**. One extra Qdrant query, no extra embedding. Measured separation over 17
+probes: answerable **0.588–0.740**, unanswerable **0.346–0.610**.
+
+**3. The guardrail protected numbers, not claims — so it fabricated.** Two reproducible
+failures, both returning `grounded: true` because neither contained a number:
+   - *"what is Eshrat Omar?"* → **invented the same definition 3 runs out of 3**: "an
+     exclusive offer through Asiacell's Shukran rewards program", borrowed from an unrelated
+     retrieved entity. (The invented Shukran placeholder was the material it borrowed.)
+   - *"what is my current balance?"* → **3 of 4 runs had a problem**: one asked for *"your
+     login credentials"*, one for *"your phone number or account details"*, one leaked
+     *"the bundle with ID 2632"*.
+
+   Three layers now: `CONFIG.answerRelevanceFloor` (default **0.55**) makes `/v1/answer`
+   decline *without calling the LLM* when the best evidence is not about the question;
+   `solicitationViolations()` in `answer.js` fails an answer that asks for a secret or for
+   account details, or that leaks an internal id; and the prompt (**v4**) gained ACCOUNT DATA
+   and DEFINITIONS sections. Code as well as prompt, because docs/17 §6 is explicit that
+   prompt-only defences are not absolute on a 3B model. Six new red-team items cover them.
+
+**4. `service_red_line` was a semantic magnet.** One entity describing balance, multipliers,
+apps, family sharing, calls, internet *and* tariffs ranked #1 for *"cheapest tiktok
+package?"* and *"what is my current balance?"*. Split into `service_red_line` (the line and
+how to get it), `terminology_red_balance` and `terminology_red_tariff`.
+
+After the fixes: *"what is my current balance?"* → *"I don't have the ability to see your
+current balance or any account details. You can check your balance through the Asiacell app
+or contact a customer service representative."* *"What is Eshrat Omar?"* → *"I don't have
+that information right now."* And no over-refusal: the FUP nuance, the RED 15 steps and the
+TikTok price all still answer correctly.
+
+⚠️ **Two honest costs of the relevance floor**, both measured:
+- *"which is cheaper, Weekly TikTok or Elna Weekly?"* scores **0.520** and now abstains. Both
+  entities are in the top 5 — a two-entity question dilutes similarity against any single
+  chunk, so a single max-relevance gate is the wrong shape for comparisons. Before the fix it
+  answered *wrongly* ("Weekly TikTok is not available"), so this is honest-but-unhelpful
+  rather than a regression.
+- *"پاکێجی ئینتەرنێتی مانگانە"* ("monthly internet package") scores **0.415** and abstains,
+  because the real Sorani names say "4 هەفتەیی" (4-weekly), not "مانگانە" (monthly). That is
+  an alias gap, and it is the first hard evidence for why aliases matter.
+
+`ANSWER_RELEVANCE_FLOOR=0` disables the gate; recalibrate with the same probe after the
+corpus changes materially.
+
 ### 📥 The seed is real now — 63 entities from FEBRA (2026-09-12)
 
 `npm run bundles:import` turns the FEBRA product export into seed entities. **62 of its 73
 rows imported**: 50 bundles (29 ATL + 21 Yooz) into `data/seed/bundles/`, and the **12 RED
 line plans as `service` entities** into `data/seed/services/`. A 63rd entity,
-`service_red_line`, is hand-authored from the same source (below). The index went from 10
-entities / 129 chunks to **73 entities / 402 chunks**, and retrieval held: Hit@5 **96.6%**
-overall and **100%** Kurdish against a corpus seven times larger. Everything from this import
-is `status: "draft"` and carries a `review_note` saying what is still missing.
+`service_red_line`, is hand-authored from the same source (below), and two more were split
+out of it. The index went from 10 entities / 129 chunks to **75 entities / 409 chunks**.
+Everything from this import is `status: "draft"` and carries a `review_note` saying what is
+still missing.
+
+**The gold set moved with it, and that changed the headline numbers.** 28 of the 42 gold
+items pointed at the placeholders, so the old "Hit@5 96.6% / 100% Kurdish" was measuring
+retrieval against invented content — and retiring the placeholders without migrating would
+have taken it to zero. The retrieval items were rewritten against real entities (31 items:
+13 en, 11 ar, 7 ckb), each `expected_chunk` verified against chunks the chunker actually
+produces. The honest numbers are **Hit@5 87.5% overall, 85.7% Kurdish** — both still past
+their gates, measured against real content for the first time.
+
+⚠️ **Coverage the migration lost, because no real content exercises it:**
+- **`unsubscribe` and `fees_edgecases` on a bundle** (9 items dropped). The FEBRA export
+  states no cancellation steps and no repeat-purchase fees, and faking them is the practice
+  this whole exercise removes.
+- **The kmr (Badini) slice entirely** (5 items dropped). No source we have carries Badini, so
+  the old "Kurdish 100%" was 5 real Sorani items plus 5 invented Badini ones. The Sorani
+  slice was widened from 2 to 7 items to compensate; Badini is now honestly at zero.
+- **Location exclusion.** `bundle_1601` was the only location-restricted entity and its
+  Baghdad-only rule was invented along with its prices. `content-kit/seed-20-worksheet.md`
+  row 16 already requires a real one — that is where the coverage comes back.
 
 **The RED plans are why `/v1/answer` can now answer "how do I subscribe?" at all.** They
 failed the bundle import for a good reason — `bundle` requires an integer `bundleId` and
@@ -144,14 +231,14 @@ them — removing them is a separate, deliberate step that has to move the eval 
 ./qdrant_bin/qdrant.exe          # native; do NOT `docker compose up qdrant` — different DB
 docker compose up -d tei         # TEI only; model is already cached, healthy in ~20s
 ollama serve                     # usually already running as a service after install
-npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 73 entities, 402 chunks, ~139s
+npm run ingest:rebuild           # --rebuild is REQUIRED, see below → 75 entities, 409 chunks, ~132s
 node src/service/server.js       # NOT `npm run serve` — a task-stop orphans the node child
 curl http://127.0.0.1:8090/healthz
 ```
 
-Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **139 s** for
-the real 73-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
-llm:true, points:402}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
+Measured on this machine: TEI answers a single embed in **~84 ms**, full ingest **132 s** for
+the real 75-entity seed (34.5 s for the old 10), `/healthz` = `{qdrant:true, tei:true,
+llm:true, points:409}`, banner = `auth on, draft content VISIBLE, LLM qwen2.5:3b-instruct`.
 Sandbox console at `GET http://127.0.0.1:8090/`. Eval reproduces the documented numbers
 exactly, and **held when the corpus grew 7×**: Hit@5 **96.6%** overall / **100%** Kurdish,
 routing **28.6%**, false-route **0.0%**; the sweep still tops out at **78.6%** under the

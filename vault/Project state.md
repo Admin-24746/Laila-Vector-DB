@@ -13,11 +13,23 @@ updated: 2026-09-12
 ## Where things stand — 2026-09-12
 
 - **Phase 0 + Phase 1: done.** Engineering backlog **empty**.
-- **Both audits: fully fixed**, every finding pinned by a regression test.
-- **Tests:** 179 passing. **`npm audit`:** 0 vulnerabilities (fastify 5.12.3).
-- **Content:** real Asiacell catalogue in the index — 73 entities / 402 chunks.
+- **Both audits fixed**, plus the four findings from the 2026-09-12 usefulness probe — every
+  one pinned by a regression test.
+- **Tests:** 190 passing. **Red team:** 21/21 safe. **`npm audit`:** 0 vulnerabilities.
+- **Content:** real Asiacell catalogue in the index — 75 entities / 409 chunks. The invented
+  placeholders are **retired**.
 - **Branch:** `fix/audit-blocking-issues`, pushed.
-- **Gates:** retrieval ✅ (96.6% / 100% Kurdish) · routing ❌ (28.6%).
+- **Gates:** retrieval ✅ (**87.5%** / **85.7%** Kurdish) · routing ❌ (**8.9%**) —
+  the first numbers measured against real content rather than placeholders. See
+  [[Evaluation]] for why they moved.
+
+## Is it usable by a chatbot? (probed 2026-09-12)
+
+| Layer | Verdict |
+|---|---|
+| `/v1/retrieve` + `grounded_facts` | **Yes.** Correct facts in three languages at 80–160 ms. Threshold on `relevance`, never on `score` |
+| `/v1/answer` | **Behind a human, or for number-shaped questions.** The number guardrail is strong and the new guards close the two fabrication routes, but a 3B model on this hardware takes 17–42 s and its Arabic prose is still rough |
+| `/v1/route` | **No.** 8.9%, waiting on the log export |
 
 ## What is blocking what
 

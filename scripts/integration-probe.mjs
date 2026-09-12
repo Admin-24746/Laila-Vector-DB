@@ -19,16 +19,24 @@ const ids = (rs) => rs.map((r) => r.entity_id);
 const out = {
   points: await countPoints(),
 
-  // Hybrid retrieval: an English "how do I subscribe" question must land on Combo.
-  combo: await retrieve('How do I subscribe to the combo bundle?', { topK: 5 })
+  // Hybrid retrieval: an English "how do I subscribe" question must land on the subscribe
+  // chunk of the right entity. Retargeted 2026-09-12 from the Combo placeholder (retired,
+  // its shortcodes were invented) to RED 15, whose steps come from the FEBRA source.
+  subscribeQuery: await retrieve('How do I subscribe to RED 15?', { topK: 5 })
     .then((rs) => ({ ids: ids(rs), topSection: rs[0]?.section, topScore: rs[0]?.score })),
 
   // A hard language filter must return only that language.
-  arabicOnly: await retrieve('باقة كومبو', { topK: 5, language: 'ar' })
+  arabicOnly: await retrieve('باقة تيك توك', { topK: 5, language: 'ar' })
     .then((rs) => ({ langs: [...new Set(rs.map((r) => r.language))], n: rs.length })),
 
-  // docs/02 "empty condition = unrestricted": bundle_1601 is baghdad-only, 1602/1603 are
-  // unrestricted, so a Basra query must drop 1601 and keep the others.
+  // docs/02 "empty condition = unrestricted": every live entity has an empty
+  // eligible_locations, so both governorates must see the same unrestricted set.
+  // ⚠ The RESTRICTED half of this rule is no longer covered. bundle_1601 was the only
+  // location-restricted entity and it was invented (baghdad-only was made up along with its
+  // prices). None of the 62 real FEBRA rows states a location, so nothing real exercises
+  // exclusion — and inventing a restriction to keep a test green is the practice this
+  // migration exists to remove. content-kit/seed-20-worksheet.md row 16 already requires a
+  // real location-restricted bundle; that is where this coverage comes back.
   basra: await retrieve('bundle', { types: ['bundle'], topK: 20, filters: { location: 'basra' } })
     .then((rs) => [...new Set(ids(rs))]),
   baghdad: await retrieve('bundle', { types: ['bundle'], topK: 20, filters: { location: 'baghdad' } })
@@ -39,7 +47,7 @@ const out = {
   nonsense: await routeMessage('qq zz xx yy ww vv').then((d) => ({ action: d.action, flow: d.flow })),
 
   // The payload fields the per-entity answer guardrail depends on must survive ingestion.
-  payloadShape: await retrieve('combo bundle', { topK: 1 })
+  payloadShape: await retrieve('weekly tiktok bundle', { topK: 1 })
     .then((rs) => ({ name: rs[0]?.payload?.name ?? null, aliases: rs[0]?.payload?.aliases ?? null })),
 };
 
